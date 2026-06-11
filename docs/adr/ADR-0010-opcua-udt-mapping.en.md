@@ -58,4 +58,4 @@ Aliases are `i + 1` in the deterministic flattening order (isomorphic to ADR-000
 - Code (pure + shells): [`src/main/java/dev/krillin/sparkplug/opcua/`](../../src/main/java/dev/krillin/sparkplug/opcua/)
 - Demo: [`src/main/java/dev/krillin/sparkplug/OpcUaUdtBridgeDemo.java`](../../src/main/java/dev/krillin/sparkplug/OpcUaUdtBridgeDemo.java)
 - Simulator: [`opcua-sim-server.py`](../../opcua-sim-server.py)
-- Prior: ADR-0005 (UDT SemVer), ADR-0007 (registry gate), ADR-0008 (#608/#607/#603), [namespace-standard §2/§5](../namespace-standard.md) *(Korean)*
+- Prior: ADR-0005 (UDT SemVer), ADR-0007 (registry gate), ADR-0008 (#608/#607/#603), [namespace-standard §2/§5](../namespace-standard.en.md)

@@ -59,4 +59,4 @@ We project a **single policy source** (`registry/command-policy.json`, deny-by-d
 - CI gate: [`src/main/java/dev/krillin/sparkplug/acl/CommandPolicyGate.java`](../../src/main/java/dev/krillin/sparkplug/acl/CommandPolicyGate.java)
 - Demo: [`src/main/java/dev/krillin/sparkplug/CommandAclDemo.java`](../../src/main/java/dev/krillin/sparkplug/CommandAclDemo.java)
 - Policy: [`registry/command-policy.json`](../../registry/command-policy.json)
-- Related: ADR-0007 (schema gate), ADR-0006 (edge-id uniqueness), [namespace-standard §7](../namespace-standard.md) *(Korean)*
+- Related: ADR-0007 (schema gate), ADR-0006 (edge-id uniqueness), [namespace-standard §7](../namespace-standard.en.md)

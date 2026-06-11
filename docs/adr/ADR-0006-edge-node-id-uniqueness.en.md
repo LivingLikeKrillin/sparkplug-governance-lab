@@ -38,4 +38,4 @@ Connect two EdgeNodes with the same group/edge (= same client-id):
 ## Links
 
 - Code: [`src/main/java/dev/krillin/sparkplug/StolenSessionDemo.java`](../../src/main/java/dev/krillin/sparkplug/StolenSessionDemo.java)
-- Naming convention: [namespace-standard §3](../namespace-standard.md) *(Korean)*
+- Naming convention: [namespace-standard §3](../namespace-standard.en.md)

@@ -95,7 +95,7 @@ For the late-joiner A/B experiment in *aware* mode, drop the [hivemq-sparkplug-a
 ## Documentation
 
 - [`docs/adr/`](docs/adr/README.md) — 11 architecture decision records, **bilingual** (Korean originals + English translations)
-- [`docs/namespace-standard.md`](docs/namespace-standard.md) — UNS namespace governance standard v0.1 (ISA-95→topic encoding, identifier uniqueness, data contracts, UDT versioning, alias registry, command ACL, STATE/store-and-forward roles, observability) *(Korean)*
+- [`docs/namespace-standard.en.md`](docs/namespace-standard.en.md) — UNS namespace governance standard v0.1 (ISA-95→topic encoding, identifier uniqueness, data contracts, UDT versioning, alias registry, command ACL, STATE/store-and-forward roles, observability) — [Korean original](docs/namespace-standard.md)
 
 ## Honesty notes
 

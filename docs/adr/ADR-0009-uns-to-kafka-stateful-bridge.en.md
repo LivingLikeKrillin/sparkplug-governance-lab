@@ -30,4 +30,4 @@ Production UNS→Kafka is typically Confluent + Avro + Schema Registry; this PoC
 
 - Code: [`src/main/java/dev/krillin/sparkplug/kafka/`](../../src/main/java/dev/krillin/sparkplug/kafka/)
 - Demo: [`src/main/java/dev/krillin/sparkplug/UnsToKafkaDemo.java`](../../src/main/java/dev/krillin/sparkplug/UnsToKafkaDemo.java)
-- Prior: ADR-0007 (registry), ADR-0004 (JSON bridge), [namespace-standard §2](../namespace-standard.md) *(Korean)*
+- Prior: ADR-0007 (registry), ADR-0004 (JSON bridge), [namespace-standard §2](../namespace-standard.en.md)
