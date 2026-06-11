@@ -1,0 +1,2 @@
+package dev.krillin.sparkplug.opcua;
+public enum UaDataType { BOOLEAN, INT32, UINT32, INT64, FLOAT, DOUBLE, STRING, DATETIME, GUID, LOCALIZEDTEXT, STATUSCODE, UNKNOWN }

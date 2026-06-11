@@ -1,0 +1,10 @@
+{
+  "templateRef" : "Motor2",
+  "version" : "2.0.0",
+  "members" : [
+    { "name" : "Rpm", "type" : "Double" }
+  ],
+  "params" : [
+    { "name" : "Location", "type" : "String" }
+  ]
+}

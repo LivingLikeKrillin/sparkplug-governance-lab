@@ -1,0 +1,9 @@
+target/
+*.class
+.idea/
+*.iml
+.vscode/
+# third-party extension binaries are downloaded, not committed
+hivemq-extensions/*
+!hivemq-extensions/README.md
+__pycache__/

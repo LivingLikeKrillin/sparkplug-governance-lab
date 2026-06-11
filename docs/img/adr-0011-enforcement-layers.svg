@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1063.6" height="968.6" viewBox="0 0 1063.6 968.6">
+<rect x="276" y="506.93333333333334" width="216" height="128" rx="8.64" fill="#f8f9fa" stroke="#adb5bd" stroke-width="1" stroke-dasharray="8 4" />
+<rect x="155" y="700.6" width="216" height="218" rx="8.64" fill="#f8f9fa" stroke="#adb5bd" stroke-width="1" stroke-dasharray="8 4" />
+<rect x="70" y="130" width="216" height="308" rx="8.64" fill="#f8f9fa" stroke="#adb5bd" stroke-width="1" stroke-dasharray="8 4" />
+<rect x="330" y="368" width="180" height="70" rx="7.2" fill="#e9ecef" stroke="#495057" stroke-width="2" />
+<rect x="294" y="546.9333333333334" width="180" height="70" rx="7.2" fill="#ffc9c9" stroke="#e03131" stroke-width="2" />
+<rect x="173" y="740.6" width="180" height="70" rx="7.2" fill="#ffc9c9" stroke="#e03131" stroke-width="2" />
+<rect x="173" y="830.6" width="180" height="70" rx="7.2" fill="#b2f2bb" stroke="#2f9e44" stroke-width="2" />
+<rect x="88" y="260" width="180" height="70" rx="7.2" fill="#d0bfff" stroke="#7048e8" stroke-width="2" />
+<rect x="88" y="170" width="180" height="70" rx="7.2" fill="#c3fae8" stroke="#0ca678" stroke-width="2" />
+<rect x="88" y="350" width="180" height="70" rx="7.2" fill="#c3fae8" stroke="#0ca678" stroke-width="2" />
+<defs><marker id="marker-el_25" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#1e1e1e"/></marker></defs>
+<path d="M 420 438 L 384 506.93333333333334" fill="none" stroke="#1e1e1e" stroke-width="2" marker-end="url(#marker-el_25)" />
+<defs><marker id="marker-el_28" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#1e1e1e"/></marker></defs>
+<path d="M 384 634.9333333333334 L 263 700.6" fill="none" stroke="#1e1e1e" stroke-width="2" marker-end="url(#marker-el_28)" />
+<defs><marker id="marker-el_31" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#1e1e1e"/></marker></defs>
+<path d="M 263 810.6 L 263 830.6" fill="none" stroke="#1e1e1e" stroke-width="2" marker-end="url(#marker-el_31)" />
+<defs><marker id="marker-el_34" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#1e1e1e"/></marker></defs>
+<path d="M 178 240 L 178 260" fill="none" stroke="#1e1e1e" stroke-width="2" marker-end="url(#marker-el_34)" />
+<defs><marker id="marker-el_37" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#1e1e1e"/></marker></defs>
+<path d="M 178 330 L 178 350" fill="none" stroke="#1e1e1e" stroke-width="2" marker-end="url(#marker-el_37)" />
+<defs><marker id="marker-el_38" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#1e1e1e"/></marker></defs>
+<path d="M 178 438 L 384 506.93333333333334" fill="none" stroke="#1e1e1e" stroke-width="2" marker-end="url(#marker-el_38)" />
+<defs><marker id="marker-el_41" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#1e1e1e"/></marker></defs>
+<path d="M 178 438 L 263 700.6" fill="none" stroke="#1e1e1e" stroke-width="2" marker-end="url(#marker-el_41)" />
+<rect x="254.59038107227315" y="457.48582119183834" width="270" height="17" rx="0" fill="#ffffff" stroke="transparent" stroke-width="1" stroke-dasharray="8 4" />
+<rect x="155.42221007133944" y="646.9619065443123" width="322.8" height="17" rx="0" fill="#ffffff" stroke="transparent" stroke-width="1" stroke-dasharray="8 4" />
+<rect x="140.39999999999998" y="812.1" width="217.20000000000002" height="17" rx="0" fill="#ffffff" stroke="transparent" stroke-width="1" stroke-dasharray="8 4" />
+<rect x="101.6" y="241.5" width="124.80000000000001" height="17" rx="0" fill="#ffffff" stroke="transparent" stroke-width="1" stroke-dasharray="8 4" />
+<rect x="134.95734662604593" y="477.24306794859905" width="283.20000000000005" height="17" rx="0" fill="#ffffff" stroke="transparent" stroke-width="1" stroke-dasharray="8 4" />
+<rect x="82.08038855776499" y="565.1113746100151" width="250.20000000000002" height="17" rx="0" fill="#ffffff" stroke="transparent" stroke-width="1" stroke-dasharray="8 4" />
+<text x="52" y="70.4" font-size="24" font-family="'Pretendard','Segoe UI',system-ui,sans-serif" fill="#1e1e1e" text-anchor="start" opacity="1">NCMD authorization — command identity lives in the payload, not the topic</text>
+<text x="420" y="406.6" font-size="16" font-family="'Cascadia Code','Fira Code',monospace" fill="#1e1e1e" text-anchor="middle" opacity="1">Command publisher</text>
+<text x="290" y="528.5333333333334" font-size="16" font-family="'Pretendard','Segoe UI',system-ui,sans-serif" fill="#1e1e1e" text-anchor="start" opacity="1">MQTT broker — sees the TOPIC only</text>
+<text x="384" y="584.8583333333333" font-size="13" font-family="'Cascadia Code','Fira Code',monospace" fill="#1e1e1e" text-anchor="middle" opacity="1">Topic ACL (node-level)</text>
+<text x="169" y="722.2" font-size="16" font-family="'Pretendard','Segoe UI',system-ui,sans-serif" fill="#1e1e1e" text-anchor="start" opacity="1">Edge node — sees the PAYLOAD</text>
+<text x="263" y="779.2" font-size="16" font-family="'Cascadia Code','Fira Code',monospace" fill="#1e1e1e" text-anchor="middle" opacity="1">CommandAuthorizer</text>
+<text x="263" y="868.75" font-size="14" font-family="'Cascadia Code','Fira Code',monospace" fill="#1e1e1e" text-anchor="middle" opacity="1">execute (ALLOW only)</text>
+<text x="84" y="151.6" font-size="16" font-family="'Pretendard','Segoe UI',system-ui,sans-serif" fill="#1e1e1e" text-anchor="start" opacity="1">Single policy source (deny-by-default)</text>
+<text x="178" y="298.375" font-size="15" font-family="'Cascadia Code','Fira Code',monospace" fill="#1e1e1e" text-anchor="middle" opacity="1">command-policy.json</text>
+<text x="178" y="208.6" font-size="16" font-family="'Cascadia Code','Fira Code',monospace" fill="#1e1e1e" text-anchor="middle" opacity="1">CI lint gate</text>
+<text x="178" y="388.6" font-size="16" font-family="'Cascadia Code','Fira Code',monospace" fill="#1e1e1e" text-anchor="middle" opacity="1">BrokerAclProjector</text>
+<text x="389.59038107227315" y="468.68582119183833" font-size="12" font-family="'Cascadia Code','Fira Code',monospace" fill="#1e1e1e" text-anchor="middle" opacity="1">PUBLISH NCMD — topic has no command name</text>
+<text x="316.82221007133944" y="658.1619065443124" font-size="12" font-family="'Cascadia Code','Fira Code',monospace" fill="#1e1e1e" text-anchor="middle" opacity="1">payload forwarded (broker can't inspect metrics)</text>
+<text x="249" y="823.3000000000001" font-size="12" font-family="'Cascadia Code','Fira Code',monospace" fill="#1e1e1e" text-anchor="middle" opacity="1">allowlist + range + type → ALLOW</text>
+<text x="164" y="252.7" font-size="12" font-family="'Cascadia Code','Fira Code',monospace" fill="#1e1e1e" text-anchor="middle" opacity="1">lint (fail-closed)</text>
+<text x="276.55734662604596" y="488.44306794859904" font-size="12" font-family="'Cascadia Code','Fira Code',monospace" fill="#1e1e1e" text-anchor="middle" opacity="1">projection ②: identity → node reachability</text>
+<text x="207.180388557765" y="576.3113746100152" font-size="12" font-family="'Cascadia Code','Fira Code',monospace" fill="#1e1e1e" text-anchor="middle" opacity="1">projection ①: per-command / per-value</text>
+</svg>
