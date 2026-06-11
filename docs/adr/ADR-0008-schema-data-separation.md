@@ -17,7 +17,20 @@ SpB 4.0은 **미발표**(TCK 0/30, ~18mo 지연), 와이어 포맷 **미확정**
 4. **품질(#603).** thin 메트릭에 quality 프로퍼티(StatusCode-ish). 소비자가 BAD/STALE/누락을 거버넌스 위반으로 플래그.
 5. **BIRTH-storm 절감.** 스키마가 birth 경로 밖 → 재접속/rebirth NBIRTH가 얇아짐(실측 fat=328B vs thin=162B, 166B/birth 절감). 브로커 bounce 시 전 노드 동시 재BIRTH(thundering herd) 부하 완화와 직결.
 
-![retained Definition + thin schemaRef 흐름](../img/adr-0008-definition-flow.svg)
+```mermaid
+sequenceDiagram
+    participant R as Schema Registry (authority)
+    participant E as Edge Node
+    participant B as HiveMQ (retained)
+    participant C as Consumer
+    R->>E: build Definition (Motor@1.1.0)
+    E->>B: DEFINITION - retained, published once
+    E->>B: thin NBIRTH - schemaRef + alias-only (162 B vs 328 B inline)
+    E->>B: NDATA - alias-only (RBE)
+    B->>C: retained DEFINITION, learn() = NEW
+    B->>C: duplicate DEFINITION, learn() = UNCHANGED (idempotent)
+    B->>C: thin NBIRTH/NDATA, resolved via schemaRef
+```
 
 ## Consequences
 - 거버넌스: 스키마 권위(레지스트리) + 메타데이터 계약(engUnit) + 런타임 품질(quality)이 1급 시민. 소비자측 해석·검증이 동작 코드.

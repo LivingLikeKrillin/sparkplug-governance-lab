@@ -20,7 +20,20 @@ Sparkplug 4.0 is **unreleased** and its wire format is **not final**. This PoC i
 4. **Quality (#603-like).** Thin metrics carry a `quality` property (StatusCode-ish: GOOD/STALE/BAD). The consumer flags BAD/STALE/missing quality as governance violations.
 5. **BIRTH-storm reduction.** With the schema out of the birth path, reconnect/rebirth NBIRTHs get thin: measured **328 B (inline types) vs 162 B (schemaRef)** per birth in this PoC. Directly relevant to the thundering-herd problem when a broker bounce makes every node re-BIRTH at once.
 
-![Retained Definition + thin schemaRef flow](../img/adr-0008-definition-flow.svg)
+```mermaid
+sequenceDiagram
+    participant R as Schema Registry (authority)
+    participant E as Edge Node
+    participant B as HiveMQ (retained)
+    participant C as Consumer
+    R->>E: build Definition (Motor@1.1.0)
+    E->>B: DEFINITION - retained, published once
+    E->>B: thin NBIRTH - schemaRef + alias-only (162 B vs 328 B inline)
+    E->>B: NDATA - alias-only (RBE)
+    B->>C: retained DEFINITION, learn() = NEW
+    B->>C: duplicate DEFINITION, learn() = UNCHANGED (idempotent)
+    B->>C: thin NBIRTH/NDATA, resolved via schemaRef
+```
 
 ### Wire-behavior findings (worth noting for #608)
 

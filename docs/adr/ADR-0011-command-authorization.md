@@ -10,7 +10,29 @@
 ## Decision
 **날카로운 통찰:** Sparkplug NCMD 토픽 `spBv1.0/{group}/NCMD/{edge}`에는 **명령 이름이 없다.** Rebirth·Reboot·Setpoint가 전부 동일 토픽이고 명령 정체성은 payload 안의 metric이다. 귀결 — 브로커 토픽 ACL은 per-command 인가가 **구조적으로 불가능**(노드 단위 all-or-nothing까지만); per-command·per-value 인가는 payload를 보는 edge에서만 가능하다. 두 강제 층은 서로의 일을 대신할 수 없다.
 
-![두 강제 계층](../img/adr-0011-enforcement-layers.svg)
+```mermaid
+flowchart TB
+    PUB["Command publisher (any MQTT client)"]
+    subgraph BRK["MQTT broker - sees the TOPIC only"]
+        ACL["Topic ACL (node-level, all-or-nothing)"]
+    end
+    subgraph EDGE["Edge node - sees the PAYLOAD"]
+        AUTH["CommandAuthorizer (allowlist + value range + type, deny-by-default)"]
+        EXEC["execute (ALLOW only)"]
+    end
+    subgraph POL["Single policy source"]
+        GATE["CI lint gate (fail-closed)"]
+        P[("command-policy.json (deny-by-default)")]
+        PROJ["BrokerAclProjector"]
+    end
+    PUB -->|"PUBLISH NCMD - topic carries no command name"| ACL
+    ACL -->|"payload passes through - broker cannot inspect metrics"| AUTH
+    AUTH -->|ALLOW| EXEC
+    GATE -->|lint| P
+    P --> PROJ
+    PROJ -->|"projected ACL: identity to node"| ACL
+    P -->|"loaded at edge: per-command / per-value"| AUTH
+```
 
 따라서 **단일 정책 소스**(`registry/command-policy.json`, deny-by-default)를 두 강제 지점 + 한 CI 게이트에 투영한다:
 

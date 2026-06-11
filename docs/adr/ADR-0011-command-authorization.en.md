@@ -16,7 +16,29 @@ As specified, NCMD is **wide open**. Any client that can publish to `spBv1.0/{gr
 - Per-command and per-value authorization requires payload visibility, which exists at the **edge** (or in a broker that decodes Sparkplug payloads, i.e. a Sparkplug Aware server — at a cost).
 - The two enforcement layers therefore cannot substitute for each other; they answer different questions.
 
-![Two enforcement layers](../img/adr-0011-enforcement-layers.svg)
+```mermaid
+flowchart TB
+    PUB["Command publisher (any MQTT client)"]
+    subgraph BRK["MQTT broker - sees the TOPIC only"]
+        ACL["Topic ACL (node-level, all-or-nothing)"]
+    end
+    subgraph EDGE["Edge node - sees the PAYLOAD"]
+        AUTH["CommandAuthorizer (allowlist + value range + type, deny-by-default)"]
+        EXEC["execute (ALLOW only)"]
+    end
+    subgraph POL["Single policy source"]
+        GATE["CI lint gate (fail-closed)"]
+        P[("command-policy.json (deny-by-default)")]
+        PROJ["BrokerAclProjector"]
+    end
+    PUB -->|"PUBLISH NCMD - topic carries no command name"| ACL
+    ACL -->|"payload passes through - broker cannot inspect metrics"| AUTH
+    AUTH -->|ALLOW| EXEC
+    GATE -->|lint| P
+    P --> PROJ
+    PROJ -->|"projected ACL: identity to node"| ACL
+    P -->|"loaded at edge: per-command / per-value"| AUTH
+```
 
 We project a **single policy source** (`registry/command-policy.json`, deny-by-default) onto two enforcement points plus one CI gate:
 
