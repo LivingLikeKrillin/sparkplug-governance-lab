@@ -8,7 +8,7 @@ Style: "Light / GitHub-native". Spec: `../superpowers/specs/2026-06-17-portfolio
 | File | Source | Generated? | Shown in |
 |------|--------|-----------|----------|
 | `svg/governance-lifecycle.svg` | `src/governance-lifecycle.mmd` | mermaid-cli | hero; README "The one-line idea" |
-| `svg/system-architecture.svg` | `src/system-architecture.mmd` | mermaid-cli | README "Architecture" |
+| `svg/system-architecture.svg` | itself (hand-authored) | no | README "Architecture" |
 | `svg/seq-schema-data-separation.svg` | `src/seq-schema-data-separation.mmd` | mermaid-cli | ADR-0008 |
 | `svg/seq-ncmd-authorization.svg` | `src/seq-ncmd-authorization.mmd` | mermaid-cli | ADR-0011 |
 | `svg/ot-it-dataflow.svg` | `src/ot-it-dataflow.mmd` | mermaid-cli | README "OT→IT data flow" |
@@ -34,7 +34,6 @@ put dark node text on a dark page). The hand-authored charts use the same opaque
 **mirrors** and MUST be kept identical to their `.mmd` source (modulo title front-matter) when either changes:
 
 - `src/governance-lifecycle.mmd` <-> README "The one-line idea"
-- `src/system-architecture.mmd` <-> README "Architecture"
 - `src/ot-it-dataflow.mmd` <-> README "OT→IT data flow"
 - `src/seq-schema-data-separation.mmd` <-> ADR-0008
 - `src/seq-ncmd-authorization.mmd` <-> ADR-0011
