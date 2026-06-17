@@ -1,4 +1,5 @@
-<svg viewBox="0 0 560 320" width="560" height="320" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif">
+<svg viewBox="0 0 560 320" width="560" height="320" xmlns="http://www.w3.org/2000/svg" role="img" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif">
+  <title>OPC UA to UDT loss ledger (9 members): 8 clean / 1 side-channel preserved / 0 type-identity lost</title>
   <rect x="8" y="8" width="544" height="304" rx="12" fill="#ffffff" stroke="#d0d7de"/>
   <text x="32" y="44" font-size="16" font-weight="600" fill="#1f2328">OPC UA to UDT — loss ledger (example: 9 members)</text>
   <text x="32" y="64" font-size="12" fill="#57606a">honesty as a first-class output (ADR-0010)</text>
