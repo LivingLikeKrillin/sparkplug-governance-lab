@@ -15,6 +15,7 @@ A hands-on lab for **Sparkplug B / Unified Namespace (UNS) governance**: both en
 
 The pre-deploy gate opens a governance loop that runtime drift detection closes.
 
+<!-- mirror of docs/diagrams/src/governance-lifecycle.mmd — keep in sync (see docs/diagrams/README.md) -->
 ```mermaid
 flowchart LR
     subgraph GOV["Governance (policy-as-code)"]
@@ -89,6 +90,7 @@ Plus session-fundamentals demos built first to characterize the protocol: birth/
 
 ### OT→IT data flow
 
+<!-- mirror of docs/diagrams/src/ot-it-dataflow.mmd — keep in sync (see docs/diagrams/README.md) -->
 ```mermaid
 flowchart LR
     SIM["OPC UA server<br/>information model"]

@@ -21,6 +21,9 @@ Style: "Light / GitHub-native". Spec: `../superpowers/specs/2026-06-17-portfolio
 to `svg/`. First run downloads a Puppeteer Chromium (cached). Docker fallback:
 see the comment block in `render.sh`. Hand-authored SVGs are never overwritten.
 
+The scripts are hardened to run from a path containing literal `[` `]` brackets
+(they `cd` into this dir and pass relative paths) — see the header comment in `render.sh`.
+
 ## Source-of-truth & parity
 
 `src/*.mmd` is canonical. The following README / ADR inline mermaid blocks are
