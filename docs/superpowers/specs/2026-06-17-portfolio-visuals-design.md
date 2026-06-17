@@ -1,7 +1,7 @@
 # Portfolio Visual Assets — Design
 
 **Date:** 2026-06-17
-**Status:** Approved (design), pending implementation plan
+**Status:** Implemented & merged (PR #1, #2). Some decisions evolved during implementation — see **Post-merge updates** at the end of this document for the deltas; the body below is the original design as approved.
 **Scope:** Diagram assets only (no web case-study page, no running UI)
 
 ## Problem
@@ -167,3 +167,22 @@ The single source of truth is `src/*.mmd` (for #1–#5) and the hand-authored SV
   identical," and `render.ps1` is a regeneration aid rather than a CI gate.
 - Exact wording of captions on the hero and OT→IT diagrams (to be finalized against the
   ADR vocabulary during authoring).
+
+## Post-merge updates (2026-06-18)
+
+Deltas between this design and what shipped. The sections above are left as the
+original record; this section is authoritative where they differ.
+
+- **`system-architecture` is now a hand-authored bespoke SVG, not a Mermaid render**
+  (PR #2). The original plan (#2 in the asset table) reused the README Mermaid block;
+  in practice the auto-layout was too dense, so it was replaced by a hand-authored SVG
+  with a left→right data flow under a governance top rail and orthogonal routing.
+  `src/system-architecture.mmd` was removed (it is no longer a render target), and the
+  README `## Architecture` section embeds the SVG as an image instead of inline Mermaid.
+- **Render background is opaque `-b "#ffffff"`, not `-b transparent`** (as the §Render
+  Pipeline command and the transparent-canvas wording in §Visual Style suggest). An
+  opaque white canvas reads as a clean card on GitHub dark mode; transparent would put
+  dark node text on a dark page. This was already noted as a refinement in the plan.
+- **The mermaid mirror parity is enforced**, not just a documented discipline:
+  `docs/diagrams/check-parity.py` fails (exit 1) on any drift between a `.mmd` and its
+  README/ADR mirror. See `docs/diagrams/README.md` → "Source-of-truth & parity".
