@@ -64,9 +64,11 @@ Node toolchain works today.)
 
 Applied uniformly to all seven SVGs.
 
-- **Background:** transparent, with a subtle white/light-gray rounded **card panel**
-  (border `#d0d7de`). This reads as an intentional card on both GitHub light and dark
-  mode, avoiding the "white box on dark page" problem.
+- **Background:** the SVG canvas is transparent, but each diagram sits on an **opaque**
+  white/light-gray rounded **card panel** (fill `#ffffff`, border `#d0d7de`). The panel
+  must be opaque so node text (`#1f2328` on `#f6f8fa`) keeps contrast when GitHub dark
+  mode shows the surrounding transparent area as dark — reading as an intentional card
+  on both light and dark mode, avoiding the "white box on dark page" problem.
 - **Nodes:** fill `#f6f8fa`, border `#d0d7de`, text `#1f2328`.
 - **Accents:** governance/primary `#0969da` (fill `#ddf4ff`); admit/success `#1a7f37`;
   deny/loss `#cf222e`; warning/amber `#9a6700`; arrows/edges `#57606a`.
@@ -79,6 +81,9 @@ for Mermaid output and mirrored as literal hex constants in the hand-authored SV
 
 ## Asset Inventory (7 SVG outputs, 6 conceptual assets)
 
+Asset #6 is a single conceptual "measurement" asset split into two charts (#6a, #6b);
+there is no standalone row "6".
+
 | # | Output file | Source | Proves | Origin |
 |---|-------------|--------|--------|--------|
 | 1 | `governance-lifecycle.svg` (hero) | `src/governance-lifecycle.mmd` | governance design, honest eng | **New.** Loop: `SchemaGate` (pre-deploy, fail-closed) admits → `Registry` (SemVer source of truth) → definitions → `Edge/UNS` → observed NBIRTH → `DriftMonitor` (runtime, detect-only) → drift signal back to governance. Caption: the gate opens the loop, drift closes it. |
@@ -86,7 +91,7 @@ for Mermaid output and mirrored as literal hex constants in the hand-authored SV
 | 3 | `seq-schema-data-separation.svg` | `src/seq-schema-data-separation.mmd` | protocol depth | Reuse ADR-0008 sequence block (retained DEFINITION once; thin **162 B vs 328 B inline**). |
 | 4 | `seq-ncmd-authorization.svg` | `src/seq-ncmd-authorization.mmd` | governance, protocol depth | Reuse ADR-0011 flowchart (the case a broker topic ACL cannot block — command identity in payload). |
 | 5 | `ot-it-dataflow.svg` | `src/ot-it-dataflow.mmd` | OT→IT integration | **New.** OPC UA server → Milo browse → `OpcUaTypeMapper` → `UdtDefinition` + `LossLedger` → retained DEFINITION + thin NDATA → Edge → MQTT → Kafka (log compaction) with side-channel (`ua_ticks`, `ua_statuscode`). |
-| 6a | `nbirth-size.svg` | hand-authored SVG | honest engineering | **New.** Bar: inline `328 B` vs thin `162 B` (`166 B`/birth saved, ≈49%). |
+| 6a | `nbirth-size.svg` | hand-authored SVG | honest engineering | **New.** Bar: inline `328 B` vs thin `162 B` (`166 B`/birth saved, ≈50% reduction = `166/328`). |
 | 6b | `loss-ledger.svg` | hand-authored SVG | honest engineering | **New.** Loss ledger composition: `9 members: 8 clean / 1 side-channel preserved / 0 type-identity lost`, with LossClass legend (CLEAN / PRECISION_LOSS / TYPE_IDENTITY_LOSS / SIDE_CHANNEL_REQUIRED). |
 
 All numbers trace to ADR sources: 328/162/166 from ADR-0008; the `8 clean / 1
@@ -122,7 +127,8 @@ docs/diagrams/
   `npx -y @mermaid-js/mermaid-cli -i src/<name>.mmd -o svg/<name>.svg -t neutral -c mermaid-theme.json -b transparent`
 - Hand-authored SVGs (`nbirth-size.svg`, `loss-ledger.svg`) are **not** render targets —
   they are committed sources, edited by hand.
-- First run downloads a Puppeteer Chromium; this is documented in `docs/diagrams/README.md`.
+- First run downloads a Puppeteer Chromium; this is documented in `docs/diagrams/README.md`,
+  and its cache directory must not be committed (verify `.gitignore` covers it).
 - Docker fallback (no host Node): `docker run --rm -v "$PWD:/data" minlag/mermaid-cli …`,
   documented for contributors.
 
@@ -144,8 +150,8 @@ The single source of truth is `src/*.mmd` (for #1–#5) and the hand-authored SV
 
 - All seven SVGs render to valid, standalone SVG and are legible at slide scale in a
   browser.
-- SVG backgrounds are transparent with the intended card panel; they read correctly on
-  both GitHub light and dark mode.
+- SVG canvases are transparent but sit on an opaque card panel; node text retains
+  contrast and they read correctly on both GitHub light and dark mode.
 - No external font dependencies (only standard families).
 - Measurement values match ADR sources exactly: `328` / `162` / `166` (ADR-0008);
   `8 clean / 1 side-channel / 0 type-identity lost` and the four LossClasses (ADR-0010).
