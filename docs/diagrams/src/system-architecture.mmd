@@ -1,0 +1,37 @@
+flowchart TB
+    subgraph GOV["Governance (policy-as-code)"]
+        GATE["SchemaGate (CI, fail-closed)"]
+        REG[("UDT schema registry (SemVer)")]
+        POL[("command-policy.json (deny-by-default)")]
+    end
+    subgraph OT["OT / Edge"]
+        SIM["OPC UA server (sim)"]
+        MAP["opcua: ObjectType to UDT + loss ledger"]
+        AUTH["acl: CommandAuthorizer (fail-closed)"]
+        EDGE["Sparkplug Edge Node (Tahu)"]
+    end
+    subgraph MQ["HiveMQ CE"]
+        TOPICS["spBv1.0/# (BIRTH / DATA / CMD)"]
+        RET["retained: DEFINITION / STATE"]
+    end
+    subgraph IT["IT / Consumers"]
+        HOST["Host Application"]
+        DRIFT["drift: DriftMonitor (detect-only)"]
+        KB["kafka: stateful UNS bridge"]
+        KAFKA[("Kafka (compacted topics)")]
+    end
+    SIM -->|browse / read| MAP
+    MAP -->|UdtDefinition| EDGE
+    GATE -->|admit / reject| REG
+    REG -->|definitions| EDGE
+    POL -->|project| AUTH
+    AUTH -->|ALLOW only| EDGE
+    EDGE -->|thin NBIRTH / NDATA| TOPICS
+    EDGE -->|DEFINITION, once| RET
+    TOPICS --> HOST
+    RET -->|learn schema| HOST
+    TOPICS -->|passive observe| DRIFT
+    REG -->|source of truth| DRIFT
+    TOPICS --> KB
+    KB -->|"RBE = log compaction"| KAFKA
+    HOST -->|NCMD| TOPICS
