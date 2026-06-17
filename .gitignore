@@ -7,3 +7,7 @@ target/
 hivemq-extensions/*
 !hivemq-extensions/README.md
 __pycache__/
+# mermaid-cli / puppeteer chromium cache must never be committed
+.cache/
+.puppeteer/
+docs/diagrams/.mermaid-cli/

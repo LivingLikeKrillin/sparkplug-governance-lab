@@ -1,0 +1,25 @@
+{
+  "theme": "base",
+  "themeVariables": {
+    "fontFamily": "-apple-system, Segoe UI, Helvetica, Arial, sans-serif",
+    "fontSize": "14px",
+    "primaryColor": "#f6f8fa",
+    "primaryBorderColor": "#d0d7de",
+    "primaryTextColor": "#1f2328",
+    "lineColor": "#57606a",
+    "secondaryColor": "#ddf4ff",
+    "secondaryBorderColor": "#0969da",
+    "tertiaryColor": "#ffffff",
+    "tertiaryBorderColor": "#d0d7de",
+    "clusterBkg": "#ffffff",
+    "clusterBorder": "#d0d7de",
+    "edgeLabelBackground": "#ffffff",
+    "actorBkg": "#f6f8fa",
+    "actorBorder": "#d0d7de",
+    "actorTextColor": "#1f2328",
+    "signalColor": "#57606a",
+    "signalTextColor": "#1f2328",
+    "noteBkgColor": "#ddf4ff",
+    "noteBorderColor": "#0969da"
+  }
+}
