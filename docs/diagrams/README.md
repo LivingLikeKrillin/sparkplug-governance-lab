@@ -35,5 +35,19 @@ put dark node text on a dark page). The hand-authored charts use the same opaque
 
 - `src/governance-lifecycle.mmd` <-> README "The one-line idea"
 - `src/ot-it-dataflow.mmd` <-> README "OT→IT data flow"
-- `src/seq-schema-data-separation.mmd` <-> ADR-0008
-- `src/seq-ncmd-authorization.mmd` <-> ADR-0011
+- `src/seq-schema-data-separation.mmd` <-> ADR-0008 (English + Korean)
+- `src/seq-ncmd-authorization.mmd` <-> ADR-0011 (English + Korean)
+
+This discipline is **enforced**, not just documented — run:
+
+```
+python check-parity.py
+```
+
+It checks that each `.mmd` body (front-matter stripped) appears verbatim as a
+```mermaid``` block in every mirror, and exits non-zero on any drift (stdlib
+only, suitable for a CI step or pre-commit hook).
+
+`system-architecture.svg` is **not** in this list: it is a hand-authored SVG
+(no `.mmd`, embedded in the README as an image), so there is no mermaid mirror
+to keep in sync.

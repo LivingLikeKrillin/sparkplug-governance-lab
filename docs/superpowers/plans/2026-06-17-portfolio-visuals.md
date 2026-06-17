@@ -685,3 +685,17 @@ Expected: three `OK ...` lines and no exception — numbers match ADR-0008/0010.
 
 Use superpowers:finishing-a-development-branch to decide merge/PR/cleanup. Do not merge without the user's choice.
 ```
+
+---
+
+## Post-merge updates (2026-06-18)
+
+Executed via subagent-driven development and merged. Two follow-ups changed things
+described above (see the design spec's "Post-merge updates" for detail):
+
+- **Task 4 (`system-architecture`) was superseded** by a hand-authored bespoke SVG
+  (PR #2). `src/system-architecture.mmd` was deleted, so it is no longer a render
+  target; the README embeds `svg/system-architecture.svg` as an image. The Task-4 parity
+  step (`.mmd` ↔ README Mermaid block) no longer applies to this diagram.
+- **Mermaid-mirror parity is now enforced** by `docs/diagrams/check-parity.py`
+  (exit 1 on drift) rather than left as a manual discipline.
