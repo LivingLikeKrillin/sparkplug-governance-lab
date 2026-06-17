@@ -24,6 +24,10 @@ see the comment block in `render.sh`. Hand-authored SVGs are never overwritten.
 The scripts are hardened to run from a path containing literal `[` `]` brackets
 (they `cd` into this dir and pass relative paths) — see the header comment in `render.sh`.
 
+Rendered SVGs use an **opaque white canvas** (`-b "#ffffff"`), not a transparent one,
+so each diagram reads as a clean card on GitHub dark mode (a transparent canvas would
+put dark node text on a dark page). The hand-authored charts use the same opaque card.
+
 ## Source-of-truth & parity
 
 `src/*.mmd` is canonical. The following README / ADR inline mermaid blocks are

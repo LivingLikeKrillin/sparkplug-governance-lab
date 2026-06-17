@@ -2,6 +2,10 @@
 # Renders every docs/diagrams/src/*.mmd to docs/diagrams/svg/*.svg in Style A.
 # Hand-authored SVGs (nbirth-size.svg, loss-ledger.svg) are NOT touched.
 #
+# Background is -b "#ffffff" (opaque white), NOT transparent: an opaque white
+# canvas reads as a clean card on GitHub dark mode, whereas a transparent canvas
+# would put dark node text on a dark page. Do not change to -b transparent.
+#
 # NOTE on the bracketed repo path: this repo can live under a path containing
 # literal brackets (e.g. ".../[oss]/..."). mermaid-cli expands its -i argument
 # as a glob, so an absolute path with brackets is read as a char-class and the
