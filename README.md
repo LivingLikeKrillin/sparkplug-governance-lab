@@ -18,10 +18,8 @@ The pre-deploy gate opens a governance loop that runtime drift detection closes.
 <!-- mirror of docs/diagrams/src/governance-lifecycle.mmd — keep in sync (see docs/diagrams/README.md) -->
 ```mermaid
 flowchart LR
-    subgraph GOV["Governance (policy-as-code)"]
-        GATE["SchemaGate<br/>pre-deploy, fail-closed"]
-        REG[("UDT registry<br/>SemVer, source of truth")]
-    end
+    GATE["SchemaGate<br/>pre-deploy, fail-closed"]
+    REG[("UDT registry<br/>SemVer<br/>source of truth")]
     EDGE["Edge Node / UNS<br/>NBIRTH / NDATA"]
     DRIFT["DriftMonitor<br/>runtime, detect-only"]
     GATE -->|"admit / reject<br/>breaking change"| REG
@@ -29,6 +27,8 @@ flowchart LR
     EDGE -->|"observed NBIRTH"| DRIFT
     REG -->|"source of truth"| DRIFT
     DRIFT -.->|"drift signal<br/>closes the loop"| GATE
+    classDef gov fill:#ddf4ff,stroke:#0969da,color:#1f2328;
+    class GATE,REG gov;
 ```
 
 ## Architecture
