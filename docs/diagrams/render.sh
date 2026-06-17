@@ -2,6 +2,7 @@
 # Renders every docs/diagrams/src/*.mmd to docs/diagrams/svg/*.svg in Style A.
 # Hand-authored SVGs (nbirth-size.svg, loss-ledger.svg) are NOT touched.
 set -euo pipefail
+shopt -s nullglob  # empty src/ -> zero iterations (parity with PowerShell), not a literal-glob failure
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 for f in "$here"/src/*.mmd; do
   base="$(basename "$f" .mmd)"
