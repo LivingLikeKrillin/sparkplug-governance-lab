@@ -11,6 +11,25 @@ A hands-on lab for **Sparkplug B / Unified Namespace (UNS) governance**: both en
 > primitives (Template/PropertySet). Sparkplug 4.0 is unreleased and its wire format is not
 > final — this is *not* a spec implementation.
 
+## The one-line idea
+
+The pre-deploy gate opens a governance loop that runtime drift detection closes.
+
+```mermaid
+flowchart LR
+    subgraph GOV["Governance (policy-as-code)"]
+        GATE["SchemaGate<br/>pre-deploy, fail-closed"]
+        REG[("UDT registry<br/>SemVer, source of truth")]
+    end
+    EDGE["Edge Node / UNS<br/>NBIRTH / NDATA"]
+    DRIFT["DriftMonitor<br/>runtime, detect-only"]
+    GATE -->|"admit / reject<br/>breaking change"| REG
+    REG -->|"definitions"| EDGE
+    EDGE -->|"observed NBIRTH"| DRIFT
+    REG -->|"source of truth"| DRIFT
+    DRIFT -.->|"drift signal<br/>closes the loop"| GATE
+```
+
 ## Architecture
 
 ```mermaid
@@ -67,6 +86,23 @@ All pure-logic modules are TDD'd (142 tests, `mvn test`, no broker needed); MQTT
 | `drift` | **Runtime schema-drift detection** (detect-only): passively compares observed NBIRTH UDT definitions against the registry's source of truth (UNREGISTERED / VERSION_DRIFT / member drift), tracks staleness, and emits governance health metrics — closing the loop that the pre-deployment gate (`schema`) opens. | [0012](docs/adr/ADR-0012-runtime-drift-detection.en.md) |
 
 Plus session-fundamentals demos built first to characterize the protocol: birth/death + bdSeq/seq + rebirth (`SessionDemo`), primary-host store-and-forward (`StateStoreForwardDemo`), late-joiner A/B with a Sparkplug-aware broker (`LateJoinerExperiment`), UDT silent-replacement gap (`UdtDemo`), protobuf→JSON bridge (`JsonBridgeDemo`), stolen-session storms (`StolenSessionDemo`).
+
+### OT→IT data flow
+
+```mermaid
+flowchart LR
+    SIM["OPC UA server<br/>information model"]
+    BROWSE["Milo browse"]
+    MAP["OpcUaTypeMapper<br/>+ LossLedger"]
+    DEF["retained DEFINITION<br/>+ thin NBIRTH/NDATA"]
+    EDGE["Sparkplug Edge"]
+    MQTT["HiveMQ (MQTT)"]
+    KAFKA[("Kafka<br/>log compaction")]
+    SC["side-channel<br/>ua_ticks, ua_statuscode"]
+    SIM --> BROWSE --> MAP --> DEF --> EDGE --> MQTT --> KAFKA
+    MAP -.->|"verbatim originals"| SC
+    SC -.->|"carried in birth"| DEF
+```
 
 ## Running
 
