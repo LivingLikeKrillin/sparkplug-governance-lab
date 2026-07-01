@@ -89,7 +89,21 @@ public final class OpcUaApplier implements Applier {
         while (System.currentTimeMillis() < deadline) {
             try {
                 if (isTrue(read(doneNodeId).value())) {
-                    return new Result(true, "rising-edge confirmed on " + doneNodeId);
+                    // Complete the handshake: release our own trigger output so the equipment rearms
+                    // `done` for the next activate. Best-effort — the activation is already confirmed;
+                    // a failed de-assert only annotates detail and is surfaced by the next call's
+                    // baseline guard. We write only the trigger (our output), never the equipment's
+                    // done bit (often read-only). Ports koshei R1 OpcUaApplyPort.call (ON_RELEASE).
+                    String note;
+                    try {
+                        StatusCode dc = client.writeValues(
+                                List.of(NodeId.parse(triggerNodeId)),
+                                List.of(new DataValue(new Variant(Boolean.FALSE)))).get(0);
+                        note = dc.isGood() ? "" : " (warning: trigger de-assert not confirmed: " + dc + ")";
+                    } catch (UaException e) {
+                        note = " (warning: trigger de-assert failed: " + e.getMessage() + ")";
+                    }
+                    return new Result(true, "rising-edge confirmed on " + doneNodeId + note);
                 }
             } catch (UaException transientRead) {
                 // keep polling until deadline

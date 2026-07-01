@@ -14,8 +14,12 @@ public interface Applier {
     Result write(String nodeId, double value) throws Exception;
 
     /**
-     * Rising-edge Boolean trigger: write {@code true} to {@code triggerNodeId}, then poll
-     * {@code doneNodeId} for a confirmed false→true transition within {@code timeoutMs}.
+     * Rising-edge Boolean trigger, complete one-shot handshake: write {@code true} to
+     * {@code triggerNodeId}, poll {@code doneNodeId} for a confirmed false→true transition within
+     * {@code timeoutMs}, then release the trigger (write {@code false}) so the equipment rearms
+     * {@code done} for the next activate. Never {@code ok} on "accepted" alone; a stale done=true
+     * is rejected as "no rising edge". The release is best-effort — a failed release does not fail
+     * an already-confirmed activation (it is surfaced by the next call's baseline guard).
      */
     Result call(String triggerNodeId, String doneNodeId, long timeoutMs) throws Exception;
 
