@@ -100,7 +100,9 @@ public final class OpcUaApplier implements Applier {
                                 List.of(NodeId.parse(triggerNodeId)),
                                 List.of(new DataValue(new Variant(Boolean.FALSE)))).get(0);
                         note = dc.isGood() ? "" : " (warning: trigger de-assert not confirmed: " + dc + ")";
-                    } catch (UaException e) {
+                    } catch (Exception e) {
+                        // Catch broadly (like R1 direct OpcUaApplyPort.call): a de-assert must NEVER fail
+                        // an already-confirmed activation, including on an unchecked throwable.
                         note = " (warning: trigger de-assert failed: " + e.getMessage() + ")";
                     }
                     return new Result(true, "rising-edge confirmed on " + doneNodeId + note);
