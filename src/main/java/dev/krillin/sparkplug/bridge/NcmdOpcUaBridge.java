@@ -70,8 +70,12 @@ public final class NcmdOpcUaBridge implements MqttCallback {
      * {@code op=read}) bypass authorization — observation, not command.
      */
     public NcmdResponse handle(String topic, SparkplugBPayload req) {
-        Metric m = req.getMetrics().get(0);
         String cmdId = req.getUuid();
+        if (req.getMetrics() == null || req.getMetrics().isEmpty()) {
+            // Fail-closed: a malformed payload carrying no command metric is rejected, not crashed.
+            return new NcmdResponse(cmdId, false, null, false, "no command metric");
+        }
+        Metric m = req.getMetrics().get(0);
         String name = m.getName();
         Object value = m.getValue();
         String dataType = m.getDataType().toString();
