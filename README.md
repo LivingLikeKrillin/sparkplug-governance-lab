@@ -68,6 +68,30 @@ flowchart LR
     SC -.->|"carried in birth"| DEF
 ```
 
+## Portfolio integration — the governed command path
+
+The `acl` module argues that per-command, per-value NCMD authorization has to happen where the
+payload is visible, not at the broker topic. The `bridge` package puts that thesis on a **live
+command path**: a companion durable-transaction engine (**koshei**) originates governed field
+commands and publishes them as **Sparkplug NCMD**, and this lab supplies the **edge bridge** that
+receives, authorizes, and applies them.
+
+| Artifact | Role |
+|----------|------|
+| `bridge/NcmdOpcUaBridge` | Subscribes to `spBv1.0/{group}/NCMD/{edge}`, decodes the single command metric, and **independently authorizes it deny-by-default** through the existing `acl` `CommandAuthorizer` + `CommandPolicy` — a second authorization at the D3 edge, decided *without* trusting the engine's upstream authorization. |
+| `bridge/OpcUaApplier` | On allow, applies the command to OPC-UA via Eclipse Milo (write + confirm-by-read; rising-edge confirm for trigger / `call` commands), then the bridge publishes a correlated Sparkplug **NDATA** response the engine matches by `cmdId`. |
+| `registry/koshei-line1-policy.json` | The bridge's own deny-by-default edge policy — EURange-bounded `Double` rules per setpoint node + a trigger-only rule for the activate node — kept separate from `command-policy.json` so this command path is governed by its own file. |
+| `bridge/NcmdOpcUaBridgeMain` | Runnable wiring (broker + OPC-UA endpoint + edge policy); driven end-to-end by the companion engine's cross-repo integration gate. |
+
+**Why it matters (defense-in-depth).** The command ends up authorized in **two independent places** —
+the engine's own policy upstream, *and* this bridge's edge `CommandAuthorizer`. A rogue NCMD that
+bypasses the engine is still refused at the edge (exercised by `RogueNcmd` in the bridge tests). It
+is the `acl` module's core claim — payload-level authorization the broker cannot do — proven inside
+a real actuation loop rather than a standalone demo. Scope stays demo-grade: single HiveMQ CE broker,
+a shared synthetic OPC-UA sim, single node. The bridge is the **D3 edge** component of a larger
+composable OT/IT architecture and deliberately owns *only* the edge apply + authorization, never the
+transaction itself.
+
 ## Running
 
 Requirements: Java 17+, Maven 3.9+, Docker.
