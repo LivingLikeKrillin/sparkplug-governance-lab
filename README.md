@@ -1,5 +1,6 @@
 # sparkplug-governance-lab
 
+[![governance-ci](https://github.com/LivingLikeKrillin/sparkplug-governance-lab/actions/workflows/governance-ci.yml/badge.svg)](https://github.com/LivingLikeKrillin/sparkplug-governance-lab/actions/workflows/governance-ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](LICENSE)
 ![Java](https://img.shields.io/badge/Java-17-orange?logo=openjdk&logoColor=white)
 ![Sparkplug B](https://img.shields.io/badge/Sparkplug_B-Eclipse_Tahu_1.0.14-brightgreen)
