@@ -1,5 +1,11 @@
 # sparkplug-governance-lab
 
+[![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](LICENSE)
+![Java](https://img.shields.io/badge/Java-17-orange?logo=openjdk&logoColor=white)
+![Sparkplug B](https://img.shields.io/badge/Sparkplug_B-Eclipse_Tahu_1.0.14-brightgreen)
+![Tests](https://img.shields.io/badge/tests-142-brightgreen)
+![Status: proof of concept](https://img.shields.io/badge/status-proof--of--concept-orange)
+
 A hands-on lab for **Sparkplug B / Unified Namespace (UNS) governance**: both ends of a Sparkplug session (Edge Node + Host Application) implemented from primitives on **Eclipse Tahu 1.0.14 + Eclipse Paho + HiveMQ CE**, then used to characterize real governance problems — schema evolution, command authorization, state-on-connect, OT→IT bridging — and to **enforce** answers to them as working code.
 
 **Status:** personal proof-of-concept lab. Single broker, single node scale, JSON file registry (not Avro/Confluent). It is honest about its limits — every module's ADR has an explicit "limitations" section, and lossy mappings are surfaced as first-class outputs rather than hidden.
