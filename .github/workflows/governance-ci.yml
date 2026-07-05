@@ -1,0 +1,90 @@
+name: governance-ci
+
+# Governance enforced as code, on every PR:
+#   - unit tests (the pure-logic suite, no broker)
+#   - CommandPolicyGate: fail-closed lint on the committed NCMD command policies
+#   - SchemaGate: reject a breaking UDT change, comparing the changed def against
+#     the registry AS IT IS ON THE BASE BRANCH (an in-place compare would diff a
+#     def against itself, so we gate the proposal against the pre-PR registry).
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: mvn -B test
+        run: mvn -B test
+
+  gates:
+    name: governance gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Compile
+        run: mvn -B -q -DskipTests compile
+
+      - name: CommandPolicyGate (fail-closed lint on committed command policies)
+        run: |
+          set -euo pipefail
+          for p in registry/command-policy.json registry/koshei-line1-policy.json; do
+            echo "::group::CommandPolicyGate $p"
+            mvn -B -q exec:java \
+              -Dexec.mainClass=dev.krillin.sparkplug.acl.CommandPolicyGate \
+              -Dexec.args="$p"
+            echo "::endgroup::"
+          done
+
+      - name: SchemaGate (breaking-change check on changed UDT defs, vs base registry)
+        run: |
+          set -uo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE="${{ github.event.before }}"
+          fi
+          if ! git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
+            echo "base commit ${BASE} unavailable (e.g. new branch) — nothing to compare against; skipping."
+            exit 0
+          fi
+          CHANGED=$(git diff --name-only "$BASE" HEAD -- registry/udt/ | grep '\.json$' || true)
+          if [ -z "$CHANGED" ]; then
+            echo "no registry/udt/*.json changes — SchemaGate has nothing to check."
+            exit 0
+          fi
+          git worktree add --quiet /tmp/base-registry "$BASE"
+          rc=0
+          for f in $CHANGED; do
+            if [ ! -f "$f" ]; then echo "skip deleted $f"; continue; fi
+            echo "::group::SchemaGate $f (vs base registry)"
+            if mvn -B -q exec:java \
+                 -Dexec.mainClass=dev.krillin.sparkplug.schema.SchemaGate \
+                 -Dexec.args="/tmp/base-registry/registry $f"; then
+              echo "OK: $f is compatible"
+            else
+              echo "::error file=$f::SchemaGate rejected a breaking change in $f"
+              rc=1
+            fi
+            echo "::endgroup::"
+          done
+          exit $rc
