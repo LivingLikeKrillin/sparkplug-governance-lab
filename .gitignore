@@ -1,5 +1,7 @@
 target/
 *.class
+# opa build -t wasm output (regenerate via scripts/build-policy.sh)
+build/
 .idea/
 *.iml
 .vscode/
