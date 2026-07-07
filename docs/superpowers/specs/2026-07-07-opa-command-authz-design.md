@@ -21,7 +21,7 @@ The value of OPA here is not "use a different engine" (that would be make-work).
 | 4 | **Demonstration = S3 combined.** One Rego policy composes **time + state** context (high-RPM allowed only day-shift AND state==Execute; `SafeHold` only from Execute), demonstrating multi-dimension context reasoning a flat engine can't. |
 | 5 | **Keep + alongside (non-breaking).** `CommandAuthorizer` (hand-rolled), `CommandPolicyGate`, and `NcmdOpcUaBridge` are **unchanged**. `OpaCommandAuthorizer` is added as the go-forward richer engine; a test proves it **subsumes** the simple cases and **extends** with context cases. |
 | 6 | **No edge-enforcement wiring this track.** Wiring OPA into `NcmdOpcUaBridge` (edge D3 enforcement) is a follow-up; here OPA is added + proven by the CI test (avoids touching the live-demo bridge). |
-| 7 | **Context is pure INPUT; no OPA builtins.** The Rego evaluates pure logic over `input` (`context.hour`, `context.state` supplied by the caller) — it does **not** call `time.now_ns()` or any builtin. This keeps the WASM host-import surface minimal (only the mandatory ABI imports), making the Chicory integration tractable and the decision deterministic/testable. |
+| 7 | **Context is pure INPUT; no builtin *implementations* needed.** The Rego evaluates pure logic over `input` (`context.hour`, `context.state` supplied by the caller) — it does **not** call `time.now_ns()` or any builtin, so the decision is deterministic/testable. NOTE (corrected): an `opa build -t wasm` module **always declares imports for `opa_abort`, `opa_println`, and `opa_builtin0..4`** regardless of whether the policy uses builtins — WASM instantiation fails if any declared import is unsatisfied. So Chicory must still supply **all of them as host stubs**; dec.7 only means those stubs are **never invoked** (trivial throw-if-called stubs suffice — no real `time`/builtin semantics). Memory is **exported by** the OPA module (the host reads/writes it), not imported. |
 
 ### Non-goals (roadmap)
 - Capability tokens / mTLS / pre-authorization / signing — the broader command-security direction (see the companion engine's edge-authorization design notes).
@@ -33,11 +33,11 @@ The value of OPA here is not "use a different engine" (that would be make-work).
 ## 3. Architecture
 
 ### 3.1 Components (all in `dev.krillin.sparkplug.acl`, or an `acl.opa` sub-package)
-- **`policy/command_authz.rego`** (NEW) — the policy. `package acl.command_authz`; `default allow = false` (deny-by-default); rules for the existing constraints + the S3 context conditions; a single decision document `allow` + a `reason` string. Committed source.
+- **`policy/command_authz.rego`** (NEW) — a **freshly authored demonstration policy** with its own vocabulary (`write`, `SafeHold`, `recipe.rpmSetpoint`); it is NOT a mechanical translation of the committed `command-policy.json` (whose command identities differ) — it re-implements the *kinds* of checks the hand-rolled engine does, plus the S3 context rules. `package acl.command_authz`; `default allow = false`; the entrypoint is a single rule **`decision := {"allow": allow, "reason": reason, "rule": matched_rule_id}`** (built with `-e acl/command_authz/decision` — the `-e` name MUST match this rule name). To keep faithful subsumption (see §3.3), the demo rules are authored **non-overlapping** (disjoint match-sets) so first-match vs Rego-OR semantics can't diverge. Committed source.
 - **`policy/command_authz_test.rego`** (NEW) — Rego-native unit tests (`opa test`), the policy author's proof.
 - **`policy/command_authz.wasm`** (NEW, committed) — `opa build -t wasm -e acl/command_authz/decision` output (the `policy.wasm` extracted from the bundle). Committed so `mvn test` needs no `opa` binary.
-- **`scripts/build-policy.sh`** (NEW) — regenerates the `.wasm` from the `.rego` (requires the `opa` binary; documented, not run in the standard `mvn test`).
-- **`OpaPolicy`** (NEW) — a thin wrapper over Chicory that loads `command_authz.wasm`, implements the **OPA WASM ABI** (instantiate module + host imports; `opa_malloc` → write input JSON → `opa_json_parse` → `opa_eval_ctx_*` → `opa_eval` → `opa_json_dump` → read result JSON), and exposes `eval(inputJson): resultJson`. This is the **main implementation effort** (the ABI glue). Because dec.7 removes builtins, the host imports are the minimal mandatory set (`opa_abort`, `opa_println`, memory) — no `opa_builtin*` dispatch needed.
+- **`scripts/build-policy.sh`** (NEW) — regenerates the `.wasm` from the `.rego` (requires the `opa` binary; documented, not run in the standard `mvn test`). Its header **pins the exact `opa` version + build flags** for reproducibility (the `.wasm` is a committed binary in a public repo); add a `.gitattributes` `*.wasm binary` marker.
+- **`OpaPolicy`** (NEW) — a thin wrapper over Chicory that loads `command_authz.wasm` and evaluates it. Uses the **one-shot `opa_eval` entrypoint path** (NOT the `opa_eval_ctx_*` context API — they are *alternative* paths, not a sequence): instantiate the module supplying host stubs for `opa_abort`, `opa_println`, `opa_builtin0..4` (dec.7 — declared imports, never invoked); then `opa_malloc` + write the input JSON into the module's **exported** memory, `opa_json_parse` it, call `opa_eval(0, entrypoint, dataAddr, inputAddr, inputLen, heapPtr, 0)`, `opa_json_dump` the result. **The result is a set wrapped as `[{"result": <value>}]`** — unwrap `[0].result` to get the `{allow, reason, rule}` object. Exposes `eval(inputJson): decisionJson`. This is the **main implementation effort** (the ABI glue); the §6 spike de-risks it end-to-end (instantiate-with-stubs + a trivial policy round-trip) before the real policy.
 - **`OpaCommandAuthorizer`** (NEW) — domain adapter: builds the `input` JSON from `(CommandRequest, Context)`, calls `OpaPolicy.eval`, parses the `{allow, reason}` result into the existing `Decision` type. Same `Decision` output shape as `CommandAuthorizer` (so it's a drop-in richer engine).
 - **`OpaCommandDemo`** (NEW, optional) — a `main` printing a few decisions (allow day/Execute, deny night, deny non-Execute), mirroring `CommandAclDemo`.
 
@@ -50,12 +50,14 @@ input = {
   "value":   1500,
   "context": { "state": "Execute", "hour": 14 }  // supplied by the caller (test/demo); lab-local, no cross-repo feed
 }
-decision = { "allow": true|false, "reason": "..." }   // deny-by-default; reason names the failing/matching rule
+decision = { "allow": true|false, "reason": "...", "rule": "rpm-day-execute" }   // deny-by-default
+// (wrapped by opa_eval as [{"result": decision}]; OpaPolicy unwraps [0].result)
 ```
+`OpaCommandAuthorizer` maps this to the existing `Decision`: `allow==true` → `Decision.allow(rule)` (the `rule` field supplies the `ruleId` that `Decision.allow` requires — the Rego MUST emit it on the allow path); `allow==false` → `Decision.deny(reason)`.
 
 ### 3.3 The S3 policy (concretely)
 - **deny-by-default:** `default allow = false`.
-- **Subsumption (parity with the hand-rolled engine):** target/command match + `type` match + `min`/`max` bounds + trigger-only (`value==true`) for constraint-less rules. Same verdicts as `CommandAuthorizer` for context-independent cases.
+- **Subsumption (parity with the hand-rolled engine) — with a semantics caveat:** the Rego reproduces target/command match + `type` match + `min`/`max` bounds + trigger-only (`value==true`) for constraint-less rules, **AND the three fail-closed deny branches** `CommandAuthorizer` has (`CommandAuthorizer.java`): type-mismatch → deny, value-present-but-not-a-Number → deny, trigger-only `value!=true` → deny. **CAVEAT:** `CommandAuthorizer` is **first-match** (the first matching rule is final, even when it *denies*), whereas Rego `allow` bodies are a logical **OR** (any satisfied body → allow). These diverge only when rule match-sets overlap and an earlier one denies while a later one allows. Faithful parity therefore requires either disjoint match-sets (dec: the demo policy is authored disjoint, §3.1) or explicit deny-overrides/priority encoding in Rego. The §4 subsumption test asserts parity on the *specific disjoint fixture*, not general equivalence.
 - **Extension (the S3 upgrade — context reasoning):**
   - `recipe.rpmSetpoint write` with `value > 1000` → allow **only if** `06 ≤ context.hour < 22` **and** `context.state == "Execute"`; otherwise deny (`"high-rpm restricted to day-shift & Execute"`).
   - `SafeHold` → allow **only if** `context.state == "Execute"` (deny if already Held / in Fault).
@@ -66,10 +68,11 @@ decision = { "allow": true|false, "reason": "..." }   // deny-by-default; reason
   1. **deny-by-default** — unmatched command → deny.
   2. **subsumption** — an in-bounds `rpmSetpoint` (e.g. 800) with any context → allow, matching `CommandAuthorizer` on the same request; an out-of-bounds value → deny.
   3. **extension (S3)** — `rpmSetpoint=1500` with `{hour:14,state:"Execute"}` → allow; `{hour:2,...}` → deny; `{hour:14,state:"Idle"}` → deny; `SafeHold` with `state:"Execute"` → allow, `state:"Held"` → deny.
-  4. **context-blindness contrast** — for a case (3) denies on context, assert `CommandAuthorizer` (given only the request) does NOT deny for that reason — evidencing the capability gap.
-- **`command_authz_test.rego`** via `opa test` — the policy-native proof (run in CI as an `opa`-install step, or locally; the JVM test is the authoritative CI-green proof).
-- **CI:** `governance-ci.yml` already runs `mvn test` → `OpaCommandAuthorizerTest` is auto-included; ② becomes "구현됨 · CI에서 검증" with the same rigor as ①. (Optionally add an `opa test` job step.)
-- **Docs:** ADR-0011 (command authorization) gains an "OPA/Rego + in-JVM WASM evaluation" section; README ② row updated.
+  4. **context-blindness contrast (load-bearing)** — for a case (3) denies on context (e.g. `rpm=1500, hour=2`), **positively assert `CommandAuthorizer.authorize(...).allowed() == true`** for that same request (1500 is within the hand-rolled `max`, so it allows) — isolating the denial to OPA's context check alone. This is the concrete evidence of the capability gap (not merely "does not deny for that reason").
+- **`command_authz_test.rego`** via `opa test` — the policy-native proof.
+- **CI:** `governance-ci.yml` already runs `mvn test` → `OpaCommandAuthorizerTest` is auto-included; ② becomes "구현됨 · CI에서 검증" with the same rigor as ①.
+- **`.wasm`↔`.rego` drift guard (REQUIRED, not optional):** because the standard `mvn test` job has no `opa` binary, nothing rebuilds the `.wasm` — a stale committed bundle would let CI stay green while the human-readable Rego diverges from what's enforced. Add a **separate CI job** (opa-installed) that runs `build-policy.sh` then `git diff --exit-code -- '*.wasm'`, failing if the committed bundle is stale. (Same shift-left rigor as `SchemaGate`/`CommandPolicyGate`.)
+- **Docs:** update **both** `ADR-0011-command-authorization.md` and `ADR-0011-command-authorization.en.md` with an "OPA/Rego + in-JVM WASM evaluation" section; README ② row updated.
 
 ## 5. Blast radius
 - **Added:** `acl` Rego policy (+ test) + committed `.wasm` + `build-policy.sh` + `OpaPolicy` (Chicory ABI) + `OpaCommandAuthorizer` + `OpaCommandAuthorizerTest` (+ optional demo). One new dependency: **Chicory** (`com.dylibso.chicory:runtime`, pure-JVM, test+main scope).
