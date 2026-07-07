@@ -54,7 +54,7 @@ public final class RecipePublish {
             Thread reader = new Thread(() -> { try { p.getInputStream().transferTo(out); } catch (Exception ignored) {} });
             reader.setDaemon(true); reader.start();
             if (!p.waitFor(15, TimeUnit.SECONDS)) { p.destroyForcibly(); return null; }
-            reader.join(2000);
+            reader.join();   // process already exited → stdout EOF guaranteed → unbounded join fully drains (no truncation)
             return p.exitValue() == 0 ? out.toByteArray() : null;
         } catch (Exception e) { return null; }
     }
