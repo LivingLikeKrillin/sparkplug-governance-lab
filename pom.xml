@@ -88,6 +88,20 @@
       <version>5.10.3</version>
       <scope>test</scope>
     </dependency>
+
+    <!-- Chicory: pure-JVM WebAssembly runtime, used to evaluate OPA-compiled-to-WASM
+         policies in-process (no sidecar). `wasm` = parser/module types (Parser, WasmModule,
+         ValType, FunctionType, MemoryLimits); `runtime` = Instance/Memory/HostFunction. -->
+    <dependency>
+      <groupId>com.dylibso.chicory</groupId>
+      <artifactId>wasm</artifactId>
+      <version>1.4.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.dylibso.chicory</groupId>
+      <artifactId>runtime</artifactId>
+      <version>1.4.0</version>
+    </dependency>
   </dependencies>
 
   <build>

@@ -52,6 +52,16 @@ We project a **single policy source** (`registry/command-policy.json`, deny-by-d
 - **Limitations / honesty (PoC):** the broker ACL side is projection + validation only (no live RBAC wired up — actual enforcement is the broker's responsibility). Publisher **identity is the broker/MQTT-auth layer's responsibility**; the edge is principal-independent (no re-authentication, no cryptographic command signing — signing is production hardening). Note: the `principal` fields in `command-policy.json` exist **only** to generate broker ACL entries — the edge authorizer never matches on principal. Audit goes to structured console logs only. Single policy file, PoC scale. Discrete allowed-value sets (`oneOf`) are out of scope for v1 (numeric min/max suffices).
 - Same policy-as-code + fail-closed CLI shape as the data-contract gate (ADR-0007) — data-contract governance and command governance are isomorphic. The command permission matrix sits on top of the stable node identity guaranteed by ADR-0006.
 
+## Extension: OPA/Rego + in-JVM WASM evaluation (context-conditional authorization)
+
+The `CommandAuthorizer` above only sees the request (command / target / value / type). It is **structurally** incapable of context-conditional authorization — "is it currently day shift", "what state is the equipment in right now" — because it is a pure allowlist matching only request fields. Once authorization needs to depend on context (a high-RPM setpoint allowed only on day shift; `SafeHold` allowed only from `Execute` state), the decision has to move to a rule engine.
+
+- **Decision.** Externalize the command-authorization *decision* to an OPA/Rego policy (`src/main/resources/opa/command_authz.rego`) that includes time-of-day (`context.hour`) and equipment state (`context.state`) in its input — a class of decision the request-only authorizer cannot express.
+- **Evaluation.** The Rego is compiled to WebAssembly (`opa build -t wasm`) and evaluated **in-process in the JVM via Chicory** (a pure-JVM WASM runtime) — no runtime OPA server, no network. The committed `.wasm` keeps `mvn test` hermetic, the same CI-parity shape as `SchemaGate`.
+- **Coexistence.** The hand-rolled `CommandAuthorizer` (request-only, context-blind) is kept unchanged — it remains the path for existing NCMD-bridge consumers. `OpaCommandAuthorizer` is the go-forward engine for richer, context-aware decisions.
+- **Integrity.** A CI `policy-wasm` job rebuilds the wasm from the `.rego` and fails on drift from the committed binary; `opa test` provides policy-native proof (7/7 green).
+- **Roadmap (out of scope here).** Capability tokens / mTLS / pre-authorization, and wiring OPA into the edge `NcmdOpcUaBridge` enforcement point.
+
 ## Links
 
 - Code: [`src/main/java/dev/krillin/sparkplug/acl/`](../../src/main/java/dev/krillin/sparkplug/acl/)
