@@ -79,8 +79,13 @@ public final class OpaPolicy {
      * Evaluates the policy's single entrypoint (id 0) against the given JSON input.
      *
      * @return the raw OPA result-set JSON, e.g. {@code [{"result":{"ok":true}}]}
+     *
+     * <p><b>Thread-safety:</b> a single instance holds one shared wasm linear memory and mutates the
+     * heap pointer per call, so {@code eval} is {@code synchronized} — concurrent callers are serialized
+     * (a race could otherwise read another thread's result region and return a wrong ALLOW). For high
+     * throughput, use one instance per thread rather than sharing one.
      */
-    public String eval(String inputJson) {
+    public synchronized String eval(String inputJson) {
         try {
             // Reset the module heap to the post-instantiation baseline before every call —
             // the one-shot opa_eval ABI is stateless across calls as long as we do this.
