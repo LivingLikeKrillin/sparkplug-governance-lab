@@ -88,3 +88,21 @@ jobs:
             echo "::endgroup::"
           done
           exit $rc
+
+  policy-wasm:
+    name: OPA policy wasm drift-guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: install opa 0.70.0
+        run: |
+          curl -L -o /usr/local/bin/opa https://openpolicyagent.org/downloads/v0.70.0/opa_linux_amd64_static
+          chmod +x /usr/local/bin/opa
+          opa version
+      - name: opa test (policy-native)
+        run: opa test src/main/resources/opa/command_authz.rego src/test/rego/ -v
+      - name: rebuild wasm + assert no drift
+        run: |
+          bash scripts/build-policy.sh
+          git diff --exit-code -- 'src/main/resources/opa/*.wasm' \
+            || { echo "::error::command_authz.wasm is stale — run scripts/build-policy.sh and commit"; exit 1; }
