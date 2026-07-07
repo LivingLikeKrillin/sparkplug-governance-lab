@@ -5,6 +5,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 OPA_PIN="0.70.0"
 opa version | grep -q "Version: ${OPA_PIN}" || { echo "ERROR: opa ${OPA_PIN} required (got: $(opa version | head -1))"; exit 1; }
+mkdir -p build   # scratch dir for the opa bundle (absent on a fresh CI checkout)
 build_wasm() {  # $1=rego $2=entrypoint $3=out.wasm
   opa build -t wasm -e "$2" "$1" -o build/policy-bundle.tar.gz
   tar -xzf build/policy-bundle.tar.gz -C build   # → build/policy.wasm
