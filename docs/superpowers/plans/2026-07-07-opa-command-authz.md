@@ -69,12 +69,10 @@ opa build -t wasm -e spike/decision src/main/resources/opa/spike.rego -o /tmp/sp
 tar -xzf /tmp/spike-bundle.tar.gz -C /tmp   # extracts /tmp/policy.wasm
 cp /tmp/policy.wasm src/main/resources/opa/spike.wasm
 ```
-- [ ] **Step 3: Inspect the module's imports/exports** so the ABI wiring is exact:
-```bash
-opa inspect /tmp/spike-bundle.tar.gz   # entrypoints
-# and dump wasm imports/exports (wasm-objdump if available, or Chicory's parser in the test)
-```
-Confirm the module **imports** `env.opa_abort`, `env.opa_println`, `env.opa_builtin0..4` (and `env.memory`? — per the OPA ABI the module *exports* `memory`; verify) and **exports** `opa_malloc`, `opa_eval`, `opa_json_dump`, `opa_json_parse`, `memory`, `opa_heap_ptr_get`/`opa_heap_ptr_set`, `entrypoints`.
+- [ ] **Step 3: Inspect the module's imports/exports** — **ALREADY DONE (opa 0.70.0, ABI verified by parsing the built wasm). Ground truth:**
+  - **IMPORTS the host MUST provide:** `env.memory` (a **Memory** — imported! the host creates it and passes it in; it is ALSO re-exported as `memory`), `env.opa_abort` (func), `env.opa_builtin0`, `env.opa_builtin1`, `env.opa_builtin2`, `env.opa_builtin3`, `env.opa_builtin4` (func). **That's the complete import set — NO `opa_println`** in this build. The 5 builtin funcs + opa_abort are trivial stubs (never invoked per dec.7; opa_abort should throw/log the message).
+  - **EXPORTS to call:** `opa_malloc`, `opa_free`, `opa_heap_ptr_get`, `opa_heap_ptr_set`, `opa_eval`, `opa_json_parse`, `opa_json_dump`, `opa_value_parse/dump`, `opa_eval_ctx_*`, `eval`, `entrypoints`, and `memory` (mem). Globals `opa_wasm_abi_version` / `opa_wasm_abi_minor_version` present.
+  - So the module uses the **host-supplied `env.memory`** — Chicory must create a `Memory` (min pages per the module's import limits) and pass it as the `env.memory` import; the host reads/writes THAT memory (and can also read it via the `memory` export — same instance).
 
 - [ ] **Step 4: Write the spike test** `src/test/java/dev/krillin/sparkplug/acl/opa/OpaWasmSpikeTest.java` — loads `spike.wasm` through `OpaPolicy`, evaluates `{"x": 9}` → `{"ok": true}` and `{"x": 1}` → `{"ok": false}`:
 ```java
@@ -93,7 +91,7 @@ class OpaWasmSpikeTest {
 ```
 
 - [ ] **Step 5: Implement `OpaPolicy`** `src/main/java/dev/krillin/sparkplug/acl/opa/OpaPolicy.java`. This is the ABI glue — the ALGORITHM is fixed by the OPA WASM ABI (below); wire it with the **actual Chicory API confirmed in Steps 2–3**. Algorithm:
-  1. **Instantiate** the module supplying host-function **stubs** for the declared imports `opa_abort(int)` (throw/log), `opa_println(int)` (no-op), and `opa_builtin0..4(...)` (throw "no builtins expected" — never invoked per dec.7). (If `memory` is an import in the built module, provide one; per the OPA ABI it is usually exported — use whichever the inspection showed.)
+  1. **Instantiate** the module supplying the EXACT import set (verified in Step 3): an imported **`env.memory`** (create a Chicory `Memory` sized ≥ the module's declared min pages), `env.opa_abort(i32 addr)` (read the C-string at addr from memory + throw `IllegalStateException`), and `env.opa_builtin0..4(...)` (each throws "unexpected builtin invocation" — never called per dec.7). NO `opa_println`.
   2. Grab exports: `memory`, `opa_malloc`, `opa_eval`, `opa_heap_ptr_get`, `opa_heap_ptr_set`, and the entrypoint id from `entrypoints` (or pass entrypoint 0 for a single-entrypoint build). Capture the **base heap pointer once** at instantiation: `baseHeap = opa_heap_ptr_get()`.
   3. **eval(inputJson):** `opa_heap_ptr_set(baseHeap)` first (reset — the reused instance mustn't grow unbounded, NIT); UTF-8 bytes of `inputJson`; `addr = opa_malloc(len)`; write bytes into exported `memory` at `addr`; call **one-shot** `resultAddr = opa_eval(0 /*reserved*/, entrypointId, 0 /*data addr, none*/, addr, len, opa_heap_ptr_get(), 0 /*format=JSON*/)`. **For `format=0`, `opa_eval` RETURNS the address of a NUL-terminated JSON string directly** — read bytes from `memory` starting at `resultAddr` until the NUL and UTF-8-decode. **Do NOT pass it through `opa_json_dump`** (that expects a *value* address from the ctx API, a different path — this is the single most likely spike stumbling point, per review).
   4. The result is a **result set** `[{"result": <decision>}]` — `OpaPolicy.eval` returns that raw JSON; callers unwrap `[0].result` (Chunk 2 adapter). Keep `eval` returning the raw string for the spike.
