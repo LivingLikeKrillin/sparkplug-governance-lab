@@ -135,7 +135,7 @@ default allow := false
 allow if {
 	input.command == "write"
 	input.target.group == "line1"
-	input.value > 1000          # undefined (→ rule fails → deny) if value is non-numeric — no is_number needed
+	input.value > 1000          # a non-numeric value fails the paired bound check (input.value<=3000; cross-type ordering) → rule doesn't match → deny-by-default. no is_number needed for the demo set.
 	input.value <= 3000
 	input.context.hour >= 6
 	input.context.hour < 22
