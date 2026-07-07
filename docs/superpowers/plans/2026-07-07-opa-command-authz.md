@@ -94,9 +94,9 @@ class OpaWasmSpikeTest {
 
 - [ ] **Step 5: Implement `OpaPolicy`** `src/main/java/dev/krillin/sparkplug/acl/opa/OpaPolicy.java`. This is the ABI glue — the ALGORITHM is fixed by the OPA WASM ABI (below); wire it with the **actual Chicory API confirmed in Steps 2–3**. Algorithm:
   1. **Instantiate** the module supplying host-function **stubs** for the declared imports `opa_abort(int)` (throw/log), `opa_println(int)` (no-op), and `opa_builtin0..4(...)` (throw "no builtins expected" — never invoked per dec.7). (If `memory` is an import in the built module, provide one; per the OPA ABI it is usually exported — use whichever the inspection showed.)
-  2. Grab exports: `memory`, `opa_malloc`, `opa_eval`, `opa_json_dump`, `opa_heap_ptr_get`, `opa_heap_ptr_set`, and the entrypoint id from `entrypoints` (or pass entrypoint 0 for a single-entrypoint build).
-  3. **eval(inputJson):** UTF-8 bytes of `inputJson`; `addr = opa_malloc(len)`; write bytes into exported `memory` at `addr`; `heap = opa_heap_ptr_get()`; call **one-shot** `resultAddr = opa_eval(0 /*reserved*/, entrypointId, 0 /*data addr, none*/, addr, len, heap, 0 /*format=JSON*/)`; read the NUL-terminated / length-dumped result via `opa_json_dump(resultAddr)` → a C-string addr → read bytes from memory until NUL → UTF-8 string.
-  4. The result is a **result set** `[{"result": <decision>}]` — `OpaPolicy.eval` returns that raw JSON; callers unwrap `[0].result` (or add an `evalEntrypoint` helper that unwraps). Keep `eval` returning the raw string for the spike; add the unwrap in the domain adapter (Chunk 2).
+  2. Grab exports: `memory`, `opa_malloc`, `opa_eval`, `opa_heap_ptr_get`, `opa_heap_ptr_set`, and the entrypoint id from `entrypoints` (or pass entrypoint 0 for a single-entrypoint build). Capture the **base heap pointer once** at instantiation: `baseHeap = opa_heap_ptr_get()`.
+  3. **eval(inputJson):** `opa_heap_ptr_set(baseHeap)` first (reset — the reused instance mustn't grow unbounded, NIT); UTF-8 bytes of `inputJson`; `addr = opa_malloc(len)`; write bytes into exported `memory` at `addr`; call **one-shot** `resultAddr = opa_eval(0 /*reserved*/, entrypointId, 0 /*data addr, none*/, addr, len, opa_heap_ptr_get(), 0 /*format=JSON*/)`. **For `format=0`, `opa_eval` RETURNS the address of a NUL-terminated JSON string directly** — read bytes from `memory` starting at `resultAddr` until the NUL and UTF-8-decode. **Do NOT pass it through `opa_json_dump`** (that expects a *value* address from the ctx API, a different path — this is the single most likely spike stumbling point, per review).
+  4. The result is a **result set** `[{"result": <decision>}]` — `OpaPolicy.eval` returns that raw JSON; callers unwrap `[0].result` (Chunk 2 adapter). Keep `eval` returning the raw string for the spike.
   - `fromResource(path)`: read the wasm bytes from the classpath, parse+instantiate once, reuse.
   - **Fail-closed:** any ABI error / non-`[{"result":...}]` shape → throw `IllegalStateException` (the domain adapter converts a throw to `Decision.deny`).
 
@@ -121,65 +121,55 @@ git commit -m "feat(acl): OpaPolicy — in-JVM OPA-WASM eval via Chicory (spike-
 - [ ] **Step 1: Write the policy** `src/main/resources/opa/command_authz.rego`. Deny-by-default; **disjoint** rules (§3.3); the three fail-closed denies reproduced; `decision` entrypoint with `rule`:
 ```rego
 package acl.command_authz
+import future.keywords.if      # opa 0.70.0 defaults to v0 syntax; `if` needs this import
 
 # Fresh demo policy (own vocabulary: "write", "SafeHold", "recipe.rpmSetpoint") — NOT a translation
 # of command-policy.json. Deny-by-default; rules authored non-overlapping so first-match(hand-rolled)
 # vs OR(rego) can't diverge. Context (hour, state) is pure input — no builtins.
+# EVERY helper is TOTAL (has a default) so `decision` is never undefined (else the adapter reads an
+# empty result set and denies — breaking the subsumption/SafeHold allow tests).
 
 default allow := false
-
-reason := r { not allow; r := deny_reason }
-reason := "allow" { allow }
-
-matched_rule_id := id { allow; id := allow_rule_id }
-matched_rule_id := "none" { not allow }
 
 # ---- extension: high-rpm setpoint requires day-shift AND Execute (context-conditional) ----
 allow if {
 	input.command == "write"
 	input.target.group == "line1"
-	input.value == to_number(input.value)          # value is numeric
-	input.value > 1000
-	input.value <= 3000                              # upper bound (parity w/ max)
+	input.value > 1000          # undefined (→ rule fails → deny) if value is non-numeric — no is_number needed
+	input.value <= 3000
 	input.context.hour >= 6
 	input.context.hour < 22
 	input.context.state == "Execute"
 }
-allow_rule_id := "rpm-high-day-execute" if {
-	input.command == "write"; input.value > 1000
-}
-
 # ---- subsumption: normal-range write (<=1000) allowed regardless of context ----
 allow if {
 	input.command == "write"
 	input.target.group == "line1"
-	input.value == to_number(input.value)
 	input.value >= 0
 	input.value <= 1000
 }
-
 # ---- extension: SafeHold only from Execute ----
 allow if {
 	input.command == "SafeHold"
 	input.context.state == "Execute"
 }
 
-# ---- deny reasons (human-readable; deny-by-default otherwise) ----
-deny_reason := "high-rpm restricted to day-shift(06-22) & Execute" if {
-	input.command == "write"; input.value > 1000; not allow
-}
-deny_reason := "SafeHold requires state=Execute" if {
-	input.command == "SafeHold"; not allow
-}
-deny_reason := "no-matching-rule (deny-by-default)" if {
-	not rpm_case; not safehold_case
-}
-rpm_case if { input.command == "write" }
-safehold_case if { input.command == "SafeHold" }
+# ---- rule id (TOTAL: default + overrides only when allow) ----
+default matched_rule_id := "none"
+matched_rule_id := "rpm-high-day-execute" if { allow; input.command == "write"; input.value > 1000 }
+matched_rule_id := "rpm-normal"           if { allow; input.command == "write"; input.value <= 1000 }
+matched_rule_id := "safehold-execute"     if { allow; input.command == "SafeHold" }
+
+# ---- reason (TOTAL) ----
+reason := "allow" if { allow }
+default deny_reason := "no-matching-rule (deny-by-default)"
+deny_reason := "high-rpm restricted to day-shift(06-22) & Execute" if { input.command == "write"; input.value > 1000 }
+deny_reason := "SafeHold requires state=Execute" if { input.command == "SafeHold" }
+reason := deny_reason if { not allow }
 
 decision := {"allow": allow, "reason": reason, "rule": matched_rule_id}
 ```
-> NOTE: this is illustrative Rego (OPA v0.60+/1.0 `if`/`contains` syntax). The implementer refines it during `opa test` (Step 2) — the REQUIREMENTS are: deny-by-default, disjoint rules, the S3 extension (rpm day+Execute; SafeHold Execute), subsumption of the <=1000 case, and a `decision` object with `allow`/`reason`/`rule`. Reproduce the fail-closed edges (type mismatch / non-numeric / trigger-only) if you extend beyond this demo set.
+> NOTE: illustrative Rego for OPA 0.70.0 (`import future.keywords.if`). The implementer refines it during `opa test` (Step 2). REQUIREMENTS: deny-by-default; disjoint rules; S3 extension (rpm day+Execute; SafeHold Execute); subsumption of the `<=1000` case; a `decision` object with `allow`/`reason`/`rule`; **every helper TOTAL** (defaults) so `decision` is always defined. The policy uses only field access, string equality, and numeric comparisons — the SAME operation class the Chunk-0 spike (`input.x > 5`) validates against the WASM ABI, so no host `opa_builtin*` is invoked (dec.7; if `opa build` ever emits a host-builtin call for one of these, the spike's stubs surface it immediately). Fail-closed edges (type mismatch / non-numeric / trigger-only) are a conscious scope trim for the demo set (spec §4).
 
 - [ ] **Step 2: Write Rego tests** `src/test/rego/command_authz_test.rego`:
 ```rego
@@ -206,6 +196,8 @@ test_unknown_deny { not decision.allow with input as {"command":"reboot","target
 # Pinned toolchain: opa 0.70.0 (build with: opa version). Requires the `opa` binary.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+OPA_PIN="0.70.0"
+opa version | grep -q "Version: ${OPA_PIN}" || { echo "ERROR: opa ${OPA_PIN} required (wasm output is version-specific; a mismatch false-fails the CI drift-guard). Got: $(opa version | head -1)"; exit 1; }
 opa build -t wasm -e acl/command_authz/decision \
   src/main/resources/opa/command_authz.rego -o build/policy-bundle.tar.gz
 tar -xzf build/policy-bundle.tar.gz -C build   # → build/policy.wasm
@@ -322,13 +314,13 @@ class OpaCommandAuthorizerTest {
         // it cannot see hour/state. So OPA's night-deny of the same request is a context-only
         // capability the flat engine structurally lacks. (Build a minimal in-bounds policy.)
         CommandPolicy p = new CommandPolicy("1", java.util.List.of(
-            new Rule("rpm", line1(), "write", new Constraint("Double", 0.0, 3000.0))), "deny");
+            new Rule("rpm", "*", line1(), "write", new Constraint("Double", 0.0, 3000.0))), "deny");
         assertTrue(hand.authorize(p, write(1500)).allowed(), "hand-rolled allows 1500 (context-blind)");
         assertFalse(opa.authorize(write(1500), new Context("Execute", 2)).allowed(), "OPA denies at night");
     }
 }
 ```
-> Adjust `Target`/`Rule`/`Constraint` constructor arities to the real records (verify: `Target(group,edge,device)`, `Rule(id,target,command,constraint)`, `Constraint(type,min,max)` — check the source). The `write`/`SafeHold`/`group="line1"` vocabulary must match the Rego authored in Task 1.1.
+> **Real record arities (verified — use exactly):** `Target(String group, String edge, String device)`, `Rule(String id, String principal, Target target, String command, Constraint constraint)` **(5 components — `principal` is 2nd; `CommandAuthorizer` ignores it, pass `"*"`)**, `Constraint(String type, Double min, Double max)`, `CommandPolicy(String version, List<Rule> rules, String defaultEffect)`, `CommandRequest(Target, String command, Object value, String type)`. The `write`/`SafeHold`/`group="line1"` vocabulary must match the Rego authored in Task 1.1.
 
 - [ ] **Step 2: Run, confirm PASS:** `mvn -B test -Dtest=OpaCommandAuthorizerTest`
 - [ ] **Step 3: (optional) `OpaCommandDemo`** mirroring `CommandAclDemo` — a `main` printing 3–4 decisions. Skip if time-boxed.
