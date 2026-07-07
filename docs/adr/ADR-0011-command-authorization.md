@@ -45,6 +45,16 @@ flowchart TB
 - **한계·정직성(PoC):** 브로커 ACL은 **투영·검증만**(라이브 HiveMQ RBAC 미가동 — 실제 강제는 브로커 설정 책임). 발행자 **신원=브로커/MQTT auth 책임**, edge는 principal-독립(재인증·암호 서명 없음 — 서명은 프로덕션 하드닝). 감사는 콘솔/구조화 로그까지(영속 감사스토어 ❌). 단일 정책 파일·PoC 스케일. `oneOf` 이산 허용값 집합은 v1 비범위(numeric min/max로 충분).
 - ADR-0007(스키마 게이트)와 같은 policy-as-code + fail-closed CLI 패턴 — 데이터계약 거버넌스와 명령 거버넌스가 동형. ADR-0006(edge-id 유일성)이 보장하는 안정적 노드 정체성 위에 명령 권한 매트릭스를 얹는다.
 
+## 확장: OPA/Rego + JVM-내장 WASM 평가 (context-conditional 인가)
+
+위 `CommandAuthorizer`는 요청(명령/타깃/값/타입)만 본다 — **구조적으로** "지금 몇 시인가", "장비가 지금 어떤 상태인가" 같은 컨텍스트 조건을 표현할 수 없다(정책이 요청 필드만 매칭하는 순수 allowlist이므로). high-RPM setpoint를 주간(day-shift)에만 허용, 또는 SafeHold를 `Execute` 상태에서만 허용하는 등 **컨텍스트-조건부** 인가가 필요해지면, 정책을 규칙 엔진으로 외부화한다.
+
+- **결정.** 명령 인가 판단을 OPA/Rego 정책(`src/main/resources/opa/command_authz.rego`)으로 외부화한다. 시간대(`context.hour`)와 장비 상태(`context.state`)를 입력에 포함해 요청-only로는 불가능한 판단을 표현.
+- **평가.** Rego를 `opa build -t wasm`으로 WebAssembly로 컴파일하고, **JVM 안에서 Chicory**(순수 JVM WASM 런타임)로 인프로세스 평가한다 — 런타임에 OPA 서버 없음, 네트워크 없음. 커밋된 `.wasm`이 `mvn test`를 헤르메틱하게 유지(`SchemaGate`와 동일한 CI-parity 사상).
+- **공존.** 기존 `CommandAuthorizer`(요청-only, 컨텍스트 무지)는 무수정 유지 — NCMD 브리지의 기존 소비자 경로. `OpaCommandAuthorizer`는 더 풍부한 판단이 필요할 때의 go-forward 엔진.
+- **무결성.** CI `policy-wasm` job이 `.rego`로부터 wasm을 재빌드해 커밋본과 drift 검사(fail on diff) + `opa test`로 정책-네이티브 증명(7/7 green).
+- **로드맵(본 ADR 범위 밖).** capability token / mTLS / 사전인가(pre-authorization) / edge `NcmdOpcUaBridge` 강제 지점으로의 OPA 배선.
+
 ## Links
 - 코드: `../../src/main/java/dev/krillin/sparkplug/acl/`
 - 셸: `../../src/main/java/dev/krillin/sparkplug/GuardedEdgeNode.java`
