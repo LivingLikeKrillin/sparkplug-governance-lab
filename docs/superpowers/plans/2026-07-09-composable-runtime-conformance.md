@@ -345,7 +345,7 @@ return 1;
 - [ ] **Step 3: Implement** — add `registryPath` (env `REGISTRY_PATH`, default `registry`) and `conformancePath` (env `CONFORMANCE_PATH`, default null) to `Config`. **`CONFORMANCE_PATH` is the explicit selector** that resolves "which equipment/policy is pinned" for this daemon (the ncmd gate points it at the Mixer policy; the killer gate at the Weld policy) — this avoids a registry-wide scan and matches the existing `POLICY_PATH` pattern. In `main`, when `conformancePath` is set:
   - load the `ConformancePolicy` from `conformancePath` (lenient `JsonMapperFactory`),
   - load its `UdtDefinition` via `new DefinitionStore(Path.of(registryPath)).load(policy.equipmentRef(), policy.equipmentVersion())`,
-  - if `policy.dial().mode()=="recipe"`, load the active recipe `MasterSpec` (via a `MasterSpec` load from the registry, ref/ver from `policy.dial().activeRecipeRef()/Version()`),
+  - if `policy.dial().mode()=="recipe"`, load the active recipe `MasterSpec` via a NEW tiny `MasterSpecStore.load(Path registryDir, String ref, String version)` → `Optional<MasterSpec>` reading `<registryDir>/spec/<ref>/<version>.json` (mirror `DefinitionStore`; lenient `JsonMapperFactory`; unit-test load + absent). Ref/ver from `policy.dial().activeRecipeRef()/activeRecipeVersion()`. Place the `WeldSchedule` fixture at `<REGISTRY_PATH>/spec/WeldSchedule/1.0.0.json` (killer-gate fixtures under `scripts/fixtures/conformance/…`). Create `MasterSpecStore` in `core.conformance` (or `core.schema`) as part of this task.
   - print `[BRIDGE] conformance loaded <equipmentRef>@<ver> dial=<mode>`.
 
   When `conformancePath` is null → pass nulls (② is a no-op; the bridge behaves exactly as today — pure authz). Pass everything into `new NcmdOpcUaBridge(group, edge, policy, applier, conformanceDef, conformancePolicy, activeRecipe)` (nullable trio).
@@ -422,12 +422,18 @@ if (conformancePolicy != null && conformanceDef != null) {
 
 ### Task B4: Mixer migration (SAME commit, no broken window)
 
-**Files:** Create `heimdall/registry/udt/Line1-Mixer/1.0.0.json` (Mixer def with Rpm range [0,3000], Temp [0,450]) + `heimdall/registry/conformance/Line1-Mixer/1.0.0.json` (policy binding `ns=2;s=Recipe/Rpm → Rpm`, `ns=2;s=Recipe/Temp → Temp`, dial=envelope, no cross-constraints). Modify `heimdall/registry/policy.json` (rpm/temp rules → `constraint{type}` only). Modify `run-ncmd-runtime-gate.sh` ONLY if the DENY assertion needs the new reason token (it greps `.*above-max`, which the envelope violation still contains — verify, do not change unless it fails).
+**Files:** Create `heimdall/registry/udt/Line1-Mixer/1.0.0.json` (Mixer def with Rpm range [0,3000], Temp [0,450]) + `heimdall/registry/conformance/Line1-Mixer/1.0.0.json` (policyRef `Line1-Mixer-policy`, equipmentRef `Line1-Mixer`@1.0.0, dial=envelope, **no cross-constraints**, nodeBindings `{opcNodeId:"ns=2;s=Recipe/Rpm", readNodeId:null, member:"Rpm"}` and same for `Temp`). Modify `heimdall/registry/policy.json` (rpm/temp rules → `constraint{type}` only). Modify `scripts/run-ncmd-runtime-gate.sh` to **activate ② for the Mixer daemon** (REQUIRED, not optional — else ② is OFF and T3 regresses).
 
-- [ ] **Step 1:** create the Mixer `udt` + `conformance` registry files under `heimdall/registry/`.
-- [ ] **Step 2:** edit `heimdall/registry/policy.json`: `rpm` rule `constraint` → `{"type":"Double"}` (drop min/max); `temp` likewise; `activate` (constraint==null trigger) UNCHANGED.
-- [ ] **Step 3: Controller runs `bash scripts/run-ncmd-runtime-gate.sh`** → `[GATE] PASS`: T1 (Rpm=1500) APPLY via authz-type-ok + conformance-in-range; T2 (Secret) authz deny-by-default; T3 (Rpm=9999) authz-allows-then-**conformance** DENY `above-max`. If T3's grep fails because the reason token differs, fix the DENY reason string (must contain `above-max`) — NOT the range source.
-- [ ] **Step 4: Commit (single commit — model+binding+policy.json together)** — `git add heimdall/registry scripts/run-ncmd-runtime-gate.sh` ; `git commit -m "refactor(heimdall): migrate Mixer Recipe/Rpm range from policy.json to the governed model (conformance ②); no ncmd-gate regression"`.
+- [ ] **Step 1:** create the Mixer `udt` + `conformance` registry files under `heimdall/registry/`. (The `conformance` policy has NO cross-constraints, so ② reads zero siblings — `Running`/`Secret` are never read.)
+- [ ] **Step 2:** edit `heimdall/registry/policy.json`: `rpm` rule `constraint` → `{"type":"Double"}` (drop min/max); `temp` likewise; `activate` (`constraint==null` trigger-only) UNCHANGED.
+- [ ] **Step 3 (REQUIRED gate edit — same commit):** in `scripts/run-ncmd-runtime-gate.sh`, in the `step 3` Heimdall-daemon `export` block (next to `POLICY_PATH`), add:
+```bash
+export REGISTRY_PATH="$(cygpath -m "$(pwd)/heimdall/registry")"
+export CONFORMANCE_PATH="$(cygpath -m "$(pwd)/heimdall/registry/conformance/Line1-Mixer/1.0.0.json")"
+```
+This turns ON ② conformance for the Mixer so the range now enforced from the governed model. Without it, ② stays OFF (default `CONFORMANCE_PATH` null) and T3 (`Rpm=9999`) would APPLY — a regression.
+- [ ] **Step 4: Controller runs `bash scripts/run-ncmd-runtime-gate.sh`** → `[GATE] PASS`: T1 (Rpm=1500) → authz type-ok + ② in-range → APPLY; T2 (Recipe/Secret) → authz deny-by-default (no binding, ② not reached); T3 (Rpm=9999) → authz allows (type-ok, no bounds) → ② DENY with reason `spec.range.above-max` (contains `above-max`, matches the gate grep). If the grep fails, fix the DENY reason string (must contain `above-max`), NOT the range source.
+- [ ] **Step 5: Commit (single commit — model+binding+policy.json+gate-env together)** — `git add heimdall/registry scripts/run-ncmd-runtime-gate.sh` ; `git commit -m "refactor(heimdall): migrate Mixer Recipe/Rpm range from policy.json to the governed model (conformance ②); ncmd gate activates ② via CONFORMANCE_PATH, no regression"`.
 
 ### Task B5: Phase-B controller final verification (the #1 rule)
 
