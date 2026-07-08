@@ -24,10 +24,10 @@ bifrost/                              (new repo, group dev.krillin.bifrost, v0.1
 ├─ core/
 │  ├─ pom.xml                         deps: jackson, chicory wasm+runtime
 │  └─ src/main/java/dev/krillin/bifrost/core/
-│     ├─ schema/     (15 moved: UdtDefinition,Member,Param,SemVer,Verdict,Violation,CompatMode,
+│     ├─ schema/     (14 → core: UdtDefinition,Member,Param,SemVer,Verdict,Violation,CompatMode,
 │     │              TemplateAdapter,JsonMapperFactory,DefinitionStore,CompatibilityChecker,
 │     │              RecipeDefinitionStore,RecipePublish,RecipeManifest  — SchemaGate moves to gates)
-│     ├─ acl/        (12 moved: CommandPolicy,Rule,Target,Constraint,Decision,CommandRequest,
+│     ├─ acl/        (10 → core: CommandPolicy,Rule,Target,Constraint,Decision,CommandRequest,
 │     │              AclEntry,AclMapperFactory,CommandAuthorizer,BrokerAclProjector  — CommandPolicyGate→gates)
 │     └─ acl/opa/    (3 moved: OpaCommandAuthorizer,Context,OpaPolicy)
 │  ├─ src/main/resources/opa/         command_authz.rego, command_authz.wasm
@@ -124,8 +124,8 @@ Lab after reconciliation keeps its own copies of the `schema/` value types + `De
 - Create: `gates/pom.xml`
 - Move: lab `schema/SchemaGate.java` → `gates/.../gates/SchemaGate.java`; lab `acl/CommandPolicyGate.java` → `gates/.../gates/PolicyGate.java` (rename class). Tests `SchemaGateTest`, `CommandPolicyGateTest` → `gates/src/test/...` (rename the latter `PolicyGateTest`).
 
-- [ ] **Step 1:** Write `gates/pom.xml` (parent; artifactId `bifrost-gates`; dep `bifrost-core`; junit; `maven-shade-plugin` → `bifrost-gates.jar`; a small dispatcher main `dev.krillin.bifrost.gates.GatesCli` that routes `schema|policy|provenance` subcommands, OR three mains — choose one and be consistent).
-- [ ] **Step 2:** Move `SchemaGate` + `CommandPolicyGate`→`PolicyGate`; repackage to `dev.krillin.bifrost.gates`; fix imports to `dev.krillin.bifrost.core.*`. Ensure each has a `main(String[])` that reads file args, calls the core evaluator, prints a verdict, and exits non-zero on rejection.
+- [ ] **Step 1:** Write `gates/pom.xml` (parent; artifactId `bifrost-gates`; dep `bifrost-core`; junit; `maven-shade-plugin` → `bifrost-gates.jar`). **Pin a single dispatcher main** `dev.krillin.bifrost.gates.GatesCli` routing `schema|policy|provenance` subcommands (Tasks 7 & 10 invoke `bifrost-gates.jar <subcommand> …`, so it must be the dispatcher, not three separate mains).
+- [ ] **Step 2:** Move `SchemaGate` + `CommandPolicyGate`→`PolicyGate`; repackage to `dev.krillin.bifrost.gates`. **NOTE — these need NET-NEW imports, not rewrites:** in the lab both gates were *same-package* with their evaluators/model (`SchemaGate` uses `DefinitionStore`/`CompatibilityChecker`/`UdtDefinition`/`CompatMode`/`Verdict` with zero import lines; `CommandPolicyGate` uses `CommandPolicy`/`Rule`/`AclMapperFactory` same-package). Moving them to the `gates` package means **adding** `import dev.krillin.bifrost.core.schema.*` / `core.acl.*` — a sed that only rewrites existing `dev.krillin.sparkplug.*` strings will find nothing. Then give each subcommand a handler (called by `GatesCli`) that reads file args, calls the core evaluator, prints a verdict, exits non-zero on rejection.
 - [ ] **Step 3: Port tests** — `SchemaGateTest`, `PolicyGateTest` (repackaged). Add a CLI-level test per gate: exit 0 on a compatible/valid input, non-zero on incompatible/invalid.
 - [ ] **Step 4: Run** — `mvn -q -pl gates test`. Expected: PASS.
 - [ ] **Step 5: Commit** — `git add -A && git commit -m "feat(gates): SchemaGate ① + PolicyGate ② CLIs over core evaluators"`.
@@ -147,14 +147,14 @@ Lab after reconciliation keeps its own copies of the `schema/` value types + `De
 
 ## Chunk 3: Reconcile `sparkplug-governance-lab` as a code-independent consumer
 
-> Work in the lab repo on branch `feat/heimdall-governance-engine` (already checked out). Lab keeps its OWN copies of the schema value types + `DefinitionStore`; it loses only governance logic.
+> Work in the lab repo on branch `feat/bifrost-governance-product` (rename the existing `feat/heimdall-governance-engine` branch, or create it — confirm before Task 8). Lab keeps its OWN copies of the schema value types + `DefinitionStore`; it loses only governance logic.
 
 ### Task 8: Confirm the lab's retained value-type set compiles standalone
 
 **Files:**
 - Modify: lab `src/main/java/dev/krillin/sparkplug/...` (remove moved logic)
 
-- [ ] **Step 1:** Delete from the lab: `acl/` (whole package incl. `opa/`), `bridge/` (whole), the moved `schema/` **evaluators** (`CompatibilityChecker`, `RecipeDefinitionStore`, `RecipePublish`, `SchemaGate`) — but **keep** the schema value types + `DefinitionStore` (`UdtDefinition`,`Member`,`Param`,`SemVer`,`Verdict`,`Violation`,`CompatMode`,`TemplateAdapter`,`JsonMapperFactory`,`DefinitionStore`,`RecipeManifest`). Delete the 5 moving demos (`SchemaGateDemo`,`CommandAclDemo`,`GuardedEdgeNode`,`InteropEdge`,`InteropHost`) and their tests. Delete `opa/` resources.
+- [ ] **Step 1:** Delete from the lab: `acl/` (whole package incl. `opa/`), `bridge/` (whole), the moved `schema/` **evaluators** (`CompatibilityChecker`, `RecipeDefinitionStore`, `RecipePublish`, `SchemaGate`) and `RecipeManifest` (no staying lab class imports it — it belongs only to the ③ path, which moves to `core`) — but **keep** the schema value types + `DefinitionStore` actually used by the staying code: `UdtDefinition`,`Member`,`Param`,`SemVer`,`Verdict`,`Violation`,`CompatMode`,`TemplateAdapter`,`JsonMapperFactory`,`DefinitionStore`. Delete the 5 moving demos (`SchemaGateDemo`,`CommandAclDemo`,`GuardedEdgeNode`,`InteropEdge`,`InteropHost`) and their tests. Delete `opa/` resources.
 - [ ] **Step 2: Compile** — `mvn -q -f "<lab>/pom.xml" compile`. Expected: SUCCESS. If a staying class imports a deleted evaluator, that is a mis-scoped file — re-check against the spec §5 import analysis (staying code should only need value types + `DefinitionStore`).
 - [ ] **Step 3: Test** — `mvn -q -f "<lab>/pom.xml" test`. Expected: the lab's remaining tests (`spb40`,`kafka`,`drift`,`opcua`) pass. Remove tests of deleted classes.
 - [ ] **Step 4: Commit (lab repo)** — `git add -A && git commit -m "refactor: governance logic extracted to bifrost; lab keeps its own value types as a consumer"`.
