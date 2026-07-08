@@ -1,10 +1,10 @@
-# Pantheon Governance Spine — Design
+# Yggdrasil Governance Spine — Design
 
 > Status: DRAFT (brainstormed 2026-07-08, research-grounded). Spans the built `bifrost` repo + two NEW repos (`mimir`, `muninn`). Downstream of the Bifrost extraction (Chunks 1–3, done). Mjölnir carve-out is a separate track (other session) and is NOT touched here.
 
 ## Goal
 
-Stand up the **minimal skeleton of the remaining pantheon** (Mímir + Muninn) and prove, with ONE end-to-end integration gate, that the whole **northbound governance spine works together**: a single piece of equipment flows through modeling → governance → feeding, coupled only by the language-neutral data/wire contract (zero shared code). Then — and only then — the portfolio blog is written on top of the real, running system.
+Stand up the **minimal skeleton of the remaining Yggdrasil apps** (Mímir + Muninn) and prove, with ONE end-to-end integration gate, that the whole **northbound governance spine works together**: a single piece of equipment flows through modeling → governance → feeding, coupled only by the language-neutral data/wire contract (zero shared code). Then — and only then — the portfolio blog is written on top of the real, running system.
 
 Non-goal: full products. This is a skeleton that proves composition. Mjölnir (koshei), the southbound Heimdall command path, and the enterprise-template registry layer compose later.
 
@@ -12,7 +12,7 @@ Non-goal: full products. This is a skeleton that proves composition. Mjölnir (k
 
 The governance product **Bifrost** already exists and is public (`github.com/LivingLikeKrillin/bifrost`, Apache-2.0): `core` (rule model + evaluators) + `heimdall` (runtime write-boundary daemon, ②) + `gates` (CI CLIs: SchemaGate ①, PolicyGate ②-lint, ProvenancePublish ③) + `sim` (embedded Milo OPC-UA server). The lab (`sparkplug-governance-lab`) has been reconciled to a code-independent consumer and holds the northbound **prototypes**: `opcua/` (OPC-UA type-map/flatten) seeds Mímir; `spb40/` (Sparkplug definition publish/resolve + edge) + `kafka/` seed Muninn. `resequence-twin-lab` already verifies Bifrost's ③ provenance by bytes.
 
-Pantheon roles (see `bifrost-heimdall-naming` memory): Bifrost = governance product · Heimdall = write-boundary daemon (②, southbound) · **Mímir = northbound modeler (design-time, governance upstream)** · **Muninn = northbound feeder (runtime, governance downstream)** · Mjölnir = field EAI+Saga (separate).
+Yggdrasil roles (see `bifrost-heimdall-naming` memory): Bifrost = governance product · Heimdall = write-boundary daemon (②, southbound) · **Mímir = northbound modeler (design-time, governance upstream)** · **Muninn = northbound feeder (runtime, governance downstream)** · Mjölnir = field EAI+Saga (separate).
 
 ## The load-bearing decision: TWO orthogonal axes
 
@@ -119,7 +119,7 @@ One piece of equipment threads the entire spine: a **"Line1 Mixer"** type with m
 
 **Zero shared code** across repos — Mímir/Muninn/MES integrate with Bifrost only via the published data/wire contract (JSON schema + Sparkplug/OPC-UA wire + gate CLIs + published-manifest bytes), each modeling the format in its own types.
 
-**Cross-repo invocation mechanism (by process, no code dependency):** Mímir and MES cross Bifrost's governance by invoking the **built `bifrost-gates.jar` as a subprocess** (`java -jar .../bifrost/gates/target/bifrost-gates.jar schema|spec|provenance ...`) — the same "gates = CI tools, called out to" pattern the koshei/resequence seams already use. Repos are sibling checkouts under `Labs/[iiot]/` (`bifrost/`, `mimir/`, `muninn/`); paths are resolved by sibling-relative path + `cygpath -m` for the native JVM. The **end-to-end integration gate script lives in `bifrost/scripts/run-pantheon-spine-gate.sh`** (Bifrost is the hub) and orchestrates: the sim, the `bifrost-gates.jar`, and the built `mimir`/`muninn` jars (`../mimir/target/*.jar`, `../muninn/target/*.jar`), plus an MQTT broker (reuse `bifrost/docker-compose.yml`'s HiveMQ CE). No shared Maven dependency is introduced anywhere.
+**Cross-repo invocation mechanism (by process, no code dependency):** Mímir and MES cross Bifrost's governance by invoking the **built `bifrost-gates.jar` as a subprocess** (`java -jar .../bifrost/gates/target/bifrost-gates.jar schema|spec|provenance ...`) — the same "gates = CI tools, called out to" pattern the koshei/resequence seams already use. Repos are sibling checkouts under `Labs/[iiot]/` (`bifrost/`, `mimir/`, `muninn/`); paths are resolved by sibling-relative path + `cygpath -m` for the native JVM. The **end-to-end integration gate script lives in `bifrost/scripts/run-yggdrasil-spine-gate.sh`** (Bifrost is the hub) and orchestrates: the sim, the `bifrost-gates.jar`, and the built `mimir`/`muninn` jars (`../mimir/target/*.jar`, `../muninn/target/*.jar`), plus an MQTT broker (reuse `bifrost/docker-compose.yml`'s HiveMQ CE). No shared Maven dependency is introduced anywhere.
 
 ## Enterprise-ready seams (so the enterprise layer is additive, not a rewrite)
 
@@ -150,7 +150,7 @@ The design is one architectural claim, but execution MUST be chunked into indepe
 2. **sim type-node extension** — expose the Mixer OPC-UA type node (+ instances) for Mímir to browse / Muninn to read.
 3. **Mímir** (new repo) — browse → AAS-aligned definition → `gates schema`.
 4. **Muninn** (new repo) — consume governed definition → provenance-verify → NBIRTH + egress-validated NDATA → MQTT.
-5. **MES fixtures + the one integration gate** (`bifrost/scripts/run-pantheon-spine-gate.sh`) — tie it together; the 5 assertions.
+5. **MES fixtures + the one integration gate** (`bifrost/scripts/run-yggdrasil-spine-gate.sh`) — tie it together; the 5 assertions.
 
 Each chunk is controller-verified (build + its own gate/tests) before the next, exactly as the Bifrost extraction was.
 

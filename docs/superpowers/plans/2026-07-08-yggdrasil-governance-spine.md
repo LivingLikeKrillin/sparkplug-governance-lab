@@ -1,4 +1,4 @@
-# Pantheon Governance Spine Implementation Plan
+# Yggdrasil Governance Spine Implementation Plan
 
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -8,7 +8,7 @@
 
 **Tech Stack:** Java 17, Maven, Eclipse Milo 1.0.0 (OPC-UA), Eclipse Tahu (Sparkplug B), Jackson 2.17, HiveMQ CE (MQTT), JUnit 5. Repos are sibling checkouts under `Labs/[iiot]/`: `bifrost/` (built+public), NEW `mimir/`, NEW `muninn/`.
 
-**Spec:** `sparkplug-governance-lab/docs/superpowers/specs/2026-07-08-pantheon-governance-spine-design.md`.
+**Spec:** `sparkplug-governance-lab/docs/superpowers/specs/2026-07-08-yggdrasil-governance-spine-design.md`.
 
 **Progressive elaboration:** Chunk 1 is fully TDD-detailed (immediately executable, no cross-repo dependency). Chunks 2–5 are task-level outlines here; each is expanded to full bite-sized TDD detail (and plan-reviewed) JUST BEFORE it is executed, because the new-repo shapes (3–5) depend on the realized shape of chunks 1–2. Execute one chunk, controller-verify its done-bit, Eisen-gate, then elaborate + execute the next — exactly as the Bifrost extraction was run.
 
@@ -18,7 +18,7 @@
 
 ## File Structure (decomposition locked)
 
-**Chunk 1 — bifrost (feature branch `feat/pantheon-spine`):**
+**Chunk 1 — bifrost (feature branch `feat/yggdrasil-spine`):**
 - Modify `core/src/main/java/dev/krillin/bifrost/core/schema/Member.java` — add `semanticId`, `range`.
 - Create `core/.../schema/Range.java` — `record Range(double low, double high)`.
 - Modify `core/.../schema/UdtDefinition.java` — add reserved nullable `conformsTo`.
@@ -39,17 +39,17 @@
 
 **Chunk 4 — NEW repo `muninn`:** `muninn/` Maven repo. Consumes governed definition (bytes) → provenance-verify (recompute sha vs manifest) → Sparkplug B edge node NBIRTH(=governed def) + egress-validated NDATA → MQTT. Seeded by lab `spb40/`.
 
-**Chunk 5 — MES fixtures + integration gate:** master/general spec fixtures + `bifrost/scripts/run-pantheon-spine-gate.sh` orchestrating sim+broker+gates+mimir+muninn, asserting the 5 spine assertions.
+**Chunk 5 — MES fixtures + integration gate:** master/general spec fixtures + `bifrost/scripts/run-yggdrasil-spine-gate.sh` orchestrating sim+broker+gates+mimir+muninn, asserting the 5 spine assertions.
 
 ---
 
 ## Chunk 1: Bifrost core additions (spec model + `gates spec` + AAS-aligned reshape)
 
-> Work in `bifrost/` on a NEW branch `feat/pantheon-spine` (off `main`). No cross-repo dependency; fully unit-testable. Done-bit: `mvn -q install` green + `run-spec-gate.sh [GATE] PASS`.
+> Work in `bifrost/` on a NEW branch `feat/yggdrasil-spine` (off `main`). No cross-repo dependency; fully unit-testable. Done-bit: `mvn -q install` green + `run-spec-gate.sh [GATE] PASS`.
 
 ### Task 1.0: Branch
 
-- [ ] **Step 1:** `cd bifrost && git checkout -b feat/pantheon-spine` (off `main`). Confirm clean.
+- [ ] **Step 1:** `cd bifrost && git checkout -b feat/yggdrasil-spine` (off `main`). Confirm clean.
 
 ### Task 1.1: Reshape `Member` to AAS-aligned (name, type, semanticId, range) + `Range` + `UdtDefinition.conformsTo`
 
@@ -165,9 +165,9 @@ public record GeneralSpec(String specRef, String version, String productDomain,
 
 **Repo:** `bifrost/scripts` + fixtures. **Goal:** the ONE gate proving the whole spine.
 - Task 5.1: MES fixtures — general spec + master spec (Git-committed, in the gate's throwaway repo), Mixer setpoints.
-- Task 5.2: `bifrost/scripts/run-pantheon-spine-gate.sh` orchestrating: start sim + HiveMQ CE → **mimir** derives Mixer type → `gates schema` admits → **MES** master spec → `gates spec` conformance → `gates provenance` publishes → **muninn** provenance-verifies + NBIRTH + egress-validated NDATA → MQTT subscriber verifies.
+- Task 5.2: `bifrost/scripts/run-yggdrasil-spine-gate.sh` orchestrating: start sim + HiveMQ CE → **mimir** derives Mixer type → `gates schema` admits → **MES** master spec → `gates spec` conformance → `gates provenance` publishes → **muninn** provenance-verifies + NBIRTH + egress-validated NDATA → MQTT subscriber verifies.
 - Task 5.3: The 5 assertions (all observed): compat-breaking equipment change → `gates schema` REJECT; out-of-range master spec (Rpm=9999) → `gates spec` REJECT; tampered published spec → provenance verify REJECT; non-conformant NDATA sample → muninn drops (not on UNS); NBIRTH def bytes == governed registry bytes. Print `[GATE] PASS`.
-- **FINAL DONE-BIT (controller-direct):** all repos `mvn install` green; `run-pantheon-spine-gate.sh` `[GATE] PASS` run by the controller. The whole northbound spine composes via the data contract with zero shared code.
+- **FINAL DONE-BIT (controller-direct):** all repos `mvn install` green; `run-yggdrasil-spine-gate.sh` `[GATE] PASS` run by the controller. The whole northbound spine composes via the data contract with zero shared code.
 
 ---
 

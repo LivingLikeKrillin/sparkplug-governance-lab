@@ -10,7 +10,7 @@
 
 ## 1. Motivation & naming
 
-`sparkplug-governance-lab` today entangles several unrelated concerns. This design separates the **governance product** out and names the surrounding pieces so their boundaries are explicit. The naming follows a single Norse pantheon:
+`sparkplug-governance-lab` today entangles several unrelated concerns. This design separates the **governance product** out and names the surrounding pieces so their boundaries are explicit. The naming follows the Norse world-tree Yggdrasil:
 
 | Name | Role | This spec |
 |---|---|---|
