@@ -29,9 +29,11 @@
 | `sim/.../EmbeddedMiloSim.java` | add `WeldControllerType` + `BodyShop/Weld1` instance | Modify |
 | `heimdall/.../NcmdOpcUaBridgeMain.java` | load `UdtDefinition` + `ConformancePolicy` at startup | Modify |
 | `heimdall/.../NcmdOpcUaBridge.java` | ② conformance after ① authz | Modify |
-| `heimdall/.../OpcUaApplier.java` | add `readDouble(nodeId)` for sibling reads | Modify |
+| `heimdall/.../Applier.java` | interface — add `double readDouble(String) throws Exception` | Modify |
+| `heimdall/.../OpcUaApplier.java` | implement `readDouble` (parse existing `read`) | Modify |
 | `heimdall/registry/policy.json` | numeric rules → `constraint{type}` (drop min/max) | Modify (Phase B) |
-| `heimdall/registry/udt/…`, `heimdall/registry/conformance/…` | Mixer model + policy for runtime | Create (Phase B) |
+| `heimdall/registry/udt/Line1-Mixer/1.0.0.json`, `heimdall/registry/conformance/Line1-Mixer/1.0.0.json` | Mixer model + conformance policy for RUNTIME (ncmd gate) | Create (Phase B) |
+| `scripts/fixtures/conformance/…` | Weld model + policy (envelope + recipe variants) + WeldSchedule spec — the killer gate's `REGISTRY_PATH`/`CONFORMANCE_PATH` point HERE | Create |
 | `scripts/run-composable-conformance-gate.sh` | the C1–C5 killer gate | Create |
 
 **`Violation` reuse:** keep `core.schema.Violation(String rule, String detail)`. Rule ids reuse existing spellings so downstream greps match: `spec.member.unknown`, `spec.type.mismatch`, `spec.range.below-min`, `spec.range.above-max`, plus new `conformance.cross.<id>` and `conformance.recipe.deviation`.
@@ -89,10 +91,14 @@ public record CrossConstraint(String id, String ifMember, String ifOp, double if
 ```java
 // NodeBinding.java
 package dev.krillin.bifrost.core.conformance;
-/** Links a runtime OPC-UA write node to a governed equipment member. equipmentRef/version are
- *  optional (default to the policy's equipmentRef/version when null). */
-public record NodeBinding(String opcNodeId, String equipmentRef, String equipmentVersion, String member) {}
+/** Links a governed member to its OPC-UA nodes. {@code opcNodeId} = the WRITE/setpoint node matched
+ *  against an incoming command (nullable for read-only siblings never commanded). {@code readNodeId} =
+ *  the live INSTANCE node whose current value is read for cross-member rules (nullable if the member
+ *  is never a cross-member sibling). The two namespaces differ (setpoint vs instance), so both are
+ *  explicit — no string-concat convention. Only bound + numeric siblings are ever read (see B2). */
+public record NodeBinding(String opcNodeId, String readNodeId, String member) {}
 ```
+> The A1 test JSON `nodeBindings` entry becomes e.g. `{"opcNodeId":"ns=2;s=Weld/WeldCurrent","readNodeId":"ns=2;s=BodyShop/Weld1.WeldCurrent","member":"WeldCurrent"}`; sibling-only members bind `opcNodeId:null` with a `readNodeId`.
 ```java
 // ConformancePolicy.java
 package dev.krillin.bifrost.core.conformance;
@@ -187,7 +193,10 @@ class ConformanceEvaluatorTest {
         assertFalse(v.ok());
         assertTrue(v.violations().stream().anyMatch(x -> x.rule().equals("conformance.recipe.deviation")));
     }
-    // masterSpec(...) helper builds a MasterSpec with one setpoint — mirror MasterSpec's constructor.
+    // masterSpec(member,value) helper — use the 6-arg MasterSpec(specRef, version, site,
+    // equipmentRef, equipmentVersion, List<Setpoint> setpoints), e.g.
+    //   new MasterSpec("WeldSchedule","1.0.0","BodyShop","Weld-Controller","1.0.0",
+    //                  List.of(new Setpoint(member,"Double",value)));
 }
 ```
 
@@ -329,11 +338,17 @@ return 1;
 
 **Files:** Modify `heimdall/.../NcmdOpcUaBridgeMain.java` (+ its `Config`/defaults) and `NcmdOpcUaBridge.java` (accept the new deps). Test: extend `NcmdOpcUaBridgeMainDefaultsTest`.
 
-- [ ] **Step 1: Write the failing test** — assert `resolve(getenv)` yields a new `REGISTRY_PATH` default (e.g. `registry`) and that a loader reads a `UdtDefinition` + `ConformancePolicy` from it. Keep it a pure config/loader test (no live OPC/MQTT).
+- [ ] **Step 1: Write the failing test** — assert `resolve(getenv)` yields new `Config` fields: `registryPath` (default `registry`) and `conformancePath` (default `null`/empty = ② OFF). Keep it a pure config/loader test (no live OPC/MQTT).
 
 - [ ] **Step 2: Run to verify it fails** — `mvn -q -pl core,heimdall test -Dtest=NcmdOpcUaBridgeMainDefaultsTest` → FAIL.
 
-- [ ] **Step 3: Implement** — add `REGISTRY_PATH` (default `registry`) to `Config`; in `main`, load the pinned `UdtDefinition` (via `DefinitionStore`) and `ConformancePolicy` (via `ConformancePolicyStore`) for the governed equipment, and the active recipe `MasterSpec` if the dial is recipe-mode; pass them into `new NcmdOpcUaBridge(group, edge, policy, applier, def, conformancePolicy, activeRecipe)`. Print `[BRIDGE] conformance loaded <equipmentRef>@<ver> dial=<mode>`.
+- [ ] **Step 3: Implement** — add `registryPath` (env `REGISTRY_PATH`, default `registry`) and `conformancePath` (env `CONFORMANCE_PATH`, default null) to `Config`. **`CONFORMANCE_PATH` is the explicit selector** that resolves "which equipment/policy is pinned" for this daemon (the ncmd gate points it at the Mixer policy; the killer gate at the Weld policy) — this avoids a registry-wide scan and matches the existing `POLICY_PATH` pattern. In `main`, when `conformancePath` is set:
+  - load the `ConformancePolicy` from `conformancePath` (lenient `JsonMapperFactory`),
+  - load its `UdtDefinition` via `new DefinitionStore(Path.of(registryPath)).load(policy.equipmentRef(), policy.equipmentVersion())`,
+  - if `policy.dial().mode()=="recipe"`, load the active recipe `MasterSpec` (via a `MasterSpec` load from the registry, ref/ver from `policy.dial().activeRecipeRef()/Version()`),
+  - print `[BRIDGE] conformance loaded <equipmentRef>@<ver> dial=<mode>`.
+
+  When `conformancePath` is null → pass nulls (② is a no-op; the bridge behaves exactly as today — pure authz). Pass everything into `new NcmdOpcUaBridge(group, edge, policy, applier, conformanceDef, conformancePolicy, activeRecipe)` (nullable trio).
 
 - [ ] **Step 4: Run to verify pass** — `mvn -q -pl core,heimdall test -Dtest=NcmdOpcUaBridgeMainDefaultsTest` → PASS.
 
@@ -341,35 +356,50 @@ return 1;
 
 ### Task B2: Heimdall ② conformance wiring (after ① authz)
 
-**Files:** Modify `heimdall/.../NcmdOpcUaBridge.java` (the `handle` path) and `heimdall/.../OpcUaApplier.java` (add `double readDouble(String nodeId)` for sibling reads). Test: `NcmdOpcUaBridgeTest` (uses a fake applier + real evaluator).
+**Files:** Modify `heimdall/.../NcmdOpcUaBridge.java` (the `handle` path), `heimdall/.../Applier.java` (the INTERFACE — add `double readDouble(String nodeId) throws Exception`), `heimdall/.../OpcUaApplier.java` (implement `readDouble` — parse its existing `read(nodeId)` string to double). Test: `NcmdOpcUaBridgeTest` (its fake `Applier` must also implement `readDouble`).
 
 - [ ] **Step 1: Write the failing test** — with the Weld model + weld-lobe policy + a fake applier returning ElectrodeForce=2.5: an authorized `Weld/WeldCurrent=9` NCMD → bridge DENY with reason containing `conformance.cross.weld-lobe`, applier NOT called; `Weld/WeldCurrent=7` → APPLY. Also: an authorized command that fails envelope (`=13`) → DENY reason contains `above-max`.
 
 - [ ] **Step 2: Run to verify it fails** → FAIL.
 
-- [ ] **Step 3: Implement** — in `handle`, AFTER `authorizer.authorize` returns allow and BEFORE `applier.apply`:
+- [ ] **Step 3: Implement** — in `handle`, AFTER `authorizer.authorize` returns allow (the `d.allowed()` path) and BEFORE the existing `applier.apply` try-block. Use the LOCAL `dataType` (String) and `cr` (`CommandRequest`) that already exist in `handle` — **NOT `req.type()`** (`req` is the `SparkplugBPayload`, which has no `type()`). Only read siblings that a cross-constraint actually references AND that have a numeric `readNodeId` binding — so Mixer (no cross-constraints) reads NO siblings and never touches its Boolean `Running`. Wrap the read in try/catch and **DENY fail-closed** on read failure (checked `Exception` from `readDouble`):
 
 ```java
-// ① authz already passed (d.allowed()). ② conformance:
-NodeBinding binding = bindingFor(name);           // policy.nodeBindings() match on opcNodeId==name
-if (binding != null && conformanceDef != null) {
-    List<Setpoint> state = new ArrayList<>();
-    state.add(new Setpoint(binding.member(), req.type(), ((Number) value).doubleValue()));
-    for (Member sib : conformanceDef.members()) {   // sibling live reads for cross-member rules
-        if (sib.name().equals(binding.member())) continue;
-        String sibNode = siblingNodeFor(sib.name()); // from bindings (reverse) or convention
-        if (sibNode != null) state.add(new Setpoint(sib.name(), "Double", applier.readDouble(sibNode)));
-    }
-    ConformanceVerdict cv = new ConformanceEvaluator().evaluate(conformanceDef, conformancePolicy, activeRecipe, state);
-    if (!cv.ok()) {
-        String reason = cv.violations().get(0).rule() + ": " + cv.violations().get(0).detail();
-        System.out.println("[BRIDGE] DENY cmd=" + name + " val=" + value + " reason=" + reason);
-        return NcmdResponse.apply(cmdId, false, "denied: " + reason);
+// ① authz already passed (d.allowed()). ② conformance (opt-in: only when a policy is loaded):
+if (conformancePolicy != null && conformanceDef != null) {
+    NodeBinding binding = conformancePolicy.nodeBindings().stream()
+            .filter(b -> name.equals(b.opcNodeId())).findFirst().orElse(null);
+    if (binding != null) {
+        try {
+            List<Setpoint> state = new ArrayList<>();
+            state.add(new Setpoint(binding.member(), dataType, ((Number) value).doubleValue()));
+            // siblings referenced by a cross-constraint, read from their bound INSTANCE node (numeric only)
+            Set<String> needed = new LinkedHashSet<>();
+            for (CrossConstraint c : conformancePolicy.crossConstraints()) {
+                needed.add(c.ifMember()); needed.add(c.thenMember());
+            }
+            needed.remove(binding.member());
+            for (String sibMember : needed) {
+                NodeBinding sb = conformancePolicy.nodeBindings().stream()
+                        .filter(b -> sibMember.equals(b.member()) && b.readNodeId() != null).findFirst().orElse(null);
+                if (sb != null) state.add(new Setpoint(sibMember, "Double", applier.readDouble(sb.readNodeId())));
+            }
+            ConformanceVerdict cv = new ConformanceEvaluator()
+                    .evaluate(conformanceDef, conformancePolicy, activeRecipe, state);
+            if (!cv.ok()) {
+                String reason = cv.violations().get(0).rule() + ": " + cv.violations().get(0).detail();
+                System.out.println("[BRIDGE] DENY cmd=" + name + " val=" + value + " reason=" + reason);
+                return NcmdResponse.apply(cmdId, false, "denied: " + reason);
+            }
+        } catch (Exception confEx) {   // fail-closed: any conformance/read error DENIES
+            System.out.println("[BRIDGE] DENY cmd=" + name + " val=" + value + " reason=conformance-error: " + confEx.getMessage());
+            return NcmdResponse.apply(cmdId, false, "denied: conformance-error");
+        }
     }
 }
 // ... existing applier.apply(...) + [BRIDGE] APPLY log ...
 ```
-> The DENY line reuses the EXACT existing format `[BRIDGE] DENY cmd=<name> val=<v> reason=<r>`. For an envelope violation the rule id is `spec.range.above-max`, so `reason` contains `above-max` (satisfies the ncmd gate's `.*above-max` grep). Sibling node resolution: extend `nodeBindings` to also carry sibling members, or resolve `ns=2;s=BodyShop/Weld1.<member>` for the Weld instance — document the exact convention in the policy fixture.
+> The DENY line reuses the EXACT existing format `[BRIDGE] DENY cmd=<name> val=<v> reason=<r>`. An envelope violation's rule id is `spec.range.above-max`, so `reason` contains `above-max` (satisfies the ncmd gate's `.*above-max` grep). Imports needed: `java.util.{ArrayList,List,LinkedHashSet,Set}`, `dev.krillin.bifrost.core.conformance.*`, `dev.krillin.bifrost.core.schema.Setpoint`. `conformancePolicy`/`conformanceDef`/`activeRecipe` are the new bridge fields from B1 (nullable → ② is a no-op, preserving pure-authz back-compat).
 
 - [ ] **Step 4: Run to verify pass** → PASS.
 
@@ -383,7 +413,7 @@ if (binding != null && conformanceDef != null) {
   - **C1 composition:** ElectrodeForce=2.5 (seeded), authorized NCMD `Weld/WeldCurrent=9` → `[BRIDGE] DENY ... conformance.cross.weld-lobe`; `=7` → `[BRIDGE] APPLY ok=true`.
   - **C2 design==runtime:** `gates spec` on a master spec (WeldCurrent=9 with the weld-lobe policy present in the registry) → REJECT (exit 1); mirrors C1's runtime DENY.
   - **C3 single-source dual-eval:** tighten the governed policy's weld-lobe `thenValue` 8→ (or `ifValue` 3.0→3.5), re-run BOTH `gates spec` and a runtime NCMD → both verdicts flip, `policy.json` untouched.
-  - **C4 dial:** publish a recipe-mode policy (activeRecipe WeldSchedule=9kA) → runtime `Weld/WeldCurrent=7` (force=4.0, in-envelope) → `[BRIDGE] DENY ... conformance.recipe.deviation`; `=9` → APPLY.
+  - **C4 dial:** publish a **recipe-mode** policy variant (`dial.mode=recipe`, `activeRecipeRef=WeldSchedule`, `recipeTolerance=0`) that **omits the weld-lobe cross-constraint** (so no sibling read; the frozen ElectrodeForce=2.5 is never involved), with a `WeldSchedule` master spec whose setpoints are **WeldCurrent only** (=9 kA). Runtime `Weld/WeldCurrent=7` → state=[WeldCurrent=7] → `[BRIDGE] DENY ... conformance.recipe.deviation` (7≠9); `Weld/WeldCurrent=9` → envelope pass + recipe 9==9 → `[BRIDGE] APPLY ok=true`. (No writable `Weld/ElectrodeForce` is needed because recipe-mode checks only the commanded member's value.)
   - **C5 lifecycle:** `gates provenance publish` the policy bytes; `gates provenance verify` clean → 0; tamper the published policy → verify exit 1.
 
 - [ ] **Step 2: Syntax check** — `bash -n scripts/run-composable-conformance-gate.sh` → SYNTAX OK.
