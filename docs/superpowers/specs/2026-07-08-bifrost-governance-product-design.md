@@ -111,9 +111,11 @@ Grounded in the real import graph (verified 2026-07-08).
 
 Ported tests: `CommandAuthorizerTest`, `CommandPolicyGateTest`, `OpaCommandAuthorizerTest`, `SchemaGateTest`, the compatibility/recipe tests, `NcmdOpcUaBridgeTest`, `NcmdBridgePolicyTest`.
 
+> **Reading the table correctly:** the `schema/` **value types + `DefinitionStore`** in the `core` row are *copied* (bifrost gets its own canonical copy), **not deleted from the lab** — the lab retains its own copy as a consumer (§5 prose, §7.3). Only the **governance logic** (evaluators `CompatibilityChecker`/`RecipeDefinitionStore`/`RecipePublish`, all `acl/`, all `bridge/`) and the five moving demos are *removed* from the lab.
+
 **Stays in `sparkplug-governance-lab`** — the Sparkplug B experiments + the Mímir (northbound feeder) prototype:
 
-- **Mímir prototype:** `opcua/` (25 classes — OPC-UA browse / type-map / flatten / loss-ledger) + `spb40/` (codec, `DefinitionPublisher`, `SchemaResolver`) + edge nodes (`EdgeNode`, `SfEdgeNode`) + `OpcUaUdtBridgeDemo`. This is OT→canonical→UNS feeding — a separate role (§1), left as a prototype here.
+- **Mímir prototype:** the whole `opcua/` package (25 classes — OPC-UA browse / type-map / flatten / loss-ledger) + the whole `spb40/` package (codec, `DefinitionPublisher`, `SchemaResolver`, …) + edge nodes (`EdgeNode`, `SfEdgeNode`) + `OpcUaUdtBridgeDemo`. This is OT→canonical→UNS feeding — a separate role (§1), left as a prototype here.
 - `kafka/` UNS sink, `drift/` monitors, and the Sparkplug smokes (`HostApp`, `Smoke`, `MqttSmoke`, `SessionDemo`, `PrimaryHost`, `RebirthCmd`, `StateStoreForwardDemo`, `StolenSessionDemo`, `LateJoinerExperiment`, `SparkplugToJsonBridge`, `JsonBridgeDemo`, `UnsToKafkaDemo`, `DriftMonitor`, `DriftMonitorDemo`, `Spb40Demo`, `UdtDemo`).
 
 **The lab keeps its own value types.** The staying code (`spb40/`, `drift/`, `kafka/`, `opcua/`) speaks `UdtDefinition`/`Member`/`SemVer`/`CompatMode`/… and reads the registry via `DefinitionStore`. Per §4, the lab is a *consumer* and owns its own copy of these value types + registry reader — modeling the same published definition format, with **no dependency on `bifrost`**. Bifrost owns its own canonical copies in `core`; the two conform to the published schema. This is not accidental duplication — it is the polyglot-consumer contract (a Go/Node consumer would likewise define its own). The lab loses only the governance *logic* (evaluators, gates, authz, daemon), which its staying code never imported — only the moving demos did.
