@@ -26,7 +26,7 @@ Bifrost governs; Heimdall (inside it) enforces at the write boundary; Mímir *pr
 - **Authority / ownership → Bifrost.** "Owning the canonical model" means deciding what a valid definition *is*, versioning it, and admitting it to the registry-of-record — which is exactly what ① does. Bifrost is the single authority; it publishes the format spec (§4).
 - **Production → Mímir (or a human).** Proposes definitions (bottom-up from OT, or top-down). Upstream of governance; not the owner.
 - **Representation → each consumer.** The lab, Muninn, `resequence-twin-lab` each hold their own local types conforming to the published format. Code-ownership (each has its own types) ≠ model-authority (Bifrost, single).
-- **Invariant:** production and feeding are separated by governance — a proposed definition is not authoritative (and Gná must not feed data against it) until Bifrost's ① gate admits it. No path bypasses Bifrost.
+- **Invariant:** production and feeding are separated by governance — a proposed definition is not authoritative (and Muninn must not feed data against it) until Bifrost's ① gate admits it. No path bypasses Bifrost.
 
 The three governance obligations (the blog's "three bills") that constitute Bifrost:
 
