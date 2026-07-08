@@ -22,17 +22,16 @@
 - Modify `core/src/main/java/dev/krillin/bifrost/core/schema/Member.java` — add `semanticId`, `range`.
 - Create `core/.../schema/Range.java` — `record Range(double low, double high)`.
 - Modify `core/.../schema/UdtDefinition.java` — add reserved nullable `conformsTo`.
-- Modify `core/src/main/resources/schema/definition.schema.json` — add member `semanticId`/`range`.
-- Create `core/.../schema/GeneralSpec.java`, `MasterSpec.java`, `Setpoint.java` — spec model records.
-- Create `core/.../schema/SpecConformanceChecker.java` — structural+range evaluator.
+- Modify `core/src/main/resources/schema/definition.schema.json` — SPLIT shared `namedType` → `member`(+semanticId/range) & `param`(unchanged); add `conformsTo`.
+- Create `core/.../schema/{GeneralSpec, MasterSpec, Setpoint, SetpointIntent}.java` — spec model records.
+- Create `core/.../schema/{SpecConformanceChecker, SpecVerdict}.java` — structural+range evaluator + its own result type (do NOT reuse `Verdict`).
 - Create `core/src/main/resources/schema/spec.schema.json` — published general/master spec contract.
-- Modify `core/.../schema/RecipeDefinitionStore.java` — parameterize `publish(kind, …)`.
-- Modify `core/.../schema/RecipePublish.java` — accept a `kind` arg, default `recipe-setpoints`.
+- Modify `core/.../schema/RecipeDefinitionStore.java` — parameterize `publish(kind, …)`; update its 6 test call sites.
+- Modify `core/.../schema/RecipePublish.java` — accept `--kind` flag, default `recipe-setpoints`. (`ProvenancePublish.java` needs NO change — raw pass-through.)
 - Create `gates/src/main/java/dev/krillin/bifrost/gates/SpecGate.java` — `gates spec <registryDir> <masterSpecFile>`.
 - Modify `gates/.../gates/GatesCli.java` — add `case "spec"`.
-- Modify `gates/.../gates/ProvenancePublish.java` — pass optional `kind` through.
 - Create `scripts/run-spec-gate.sh` — accept/reject gate.
-- Tests: `core/src/test/.../schema/{SpecConformanceCheckerTest, SpecFormatConformanceTest}.java`, `gates/src/test/.../gates/SpecGateTest.java` (+ extend `FormatSpecConformanceTest` for the reshaped member).
+- Tests: `core/src/test/.../schema/{SpecConformanceCheckerTest, SpecFormatConformanceTest, MemberAasShapeTest}.java`, `gates/src/test/.../gates/SpecGateTest.java`; UPDATE `FormatSpecConformanceTest` (reshaped member) + `gates` tests `{SchemaGateTest, GatesCliTest}` (~24 record call sites) + `RecipeDefinitionStoreTest` (kind param).
 
 **Chunk 2 — bifrost sim:** `sim/.../EmbeddedMiloSim.java` gains a Mixer **ObjectType** (type node) + a Mixer instance; Mímir browses the type, Muninn reads the instance.
 
@@ -75,8 +74,8 @@ class MemberAasShapeTest {
 ```
 - [ ] **Step 2: Run → FAIL** (`Range` missing; `Member` 4-arg ctor missing): `mvn -q -pl core test -Dtest=MemberAasShapeTest`.
 - [ ] **Step 3: Implement** — `Range.java`: `public record Range(double low, double high) {}`. `Member.java`: `public record Member(String name, String type, String semanticId, Range range) {}` (keep the existing javadoc; note member ≈ AAS `Property`). `UdtDefinition.java`: add a trailing nullable field → `public record UdtDefinition(String templateRef, SemVer version, List<Member> members, List<Param> params, String conformsTo) {}` (reserved enterprise-template pointer, null this track; note ≈ AAS `Submodel`).
-- [ ] **Step 4: Fix compile fallout** — every `new Member(a,b)` and `new UdtDefinition(a,b,c,d)` in `core` main+test must gain the new args (`new Member(n,t,null,null)`, `new UdtDefinition(...,null)`). Grep `new Member(` and `new UdtDefinition(` across `core/src`. **Verify `CompatibilityChecker` is untouched semantically** — it reads only `.name()`/`.type()`; confirm it still compiles and its tests pass unchanged.
-- [ ] **Step 5: Update `definition.schema.json`** — add to the member object `properties`: `"semanticId": {"type":"string"}`, `"range": {"type":["object","null"],"properties":{"low":{"type":"number"},"high":{"type":"number"}},"required":["low","high"],"additionalProperties":false}`; add `semanticId` to member `required` (range stays optional/nullable). Add `"conformsTo": {"type":["string","null"]}` to the top object; keep `additionalProperties:false`. Update descriptions to note the AAS-vocabulary intent.
+- [ ] **Step 4: Fix compile fallout — REPO-WIDE, not just `core`.** Reshaping the records breaks call sites in BOTH modules (`gates` depends on `core`; the Chunk-1 done-bit is `mvn install` at the whole bifrost root). Grep repo-wide: `grep -rn "new Member(" core/src gates/src` and `grep -rn "new UdtDefinition(" core/src gates/src`. Expect ~27 `new Member(` + ~24 `new UdtDefinition(`, of which **~24 live in `gates/src/test/.../{SchemaGateTest,GatesCliTest}.java`** — these MUST be updated too (`new Member(n,t,null,null)`, `new UdtDefinition(...,null)`), else the `gates` module won't compile. **Verify `CompatibilityChecker` is untouched semantically** — it reads only `.name()`/`.type()`; confirm it compiles + its tests pass unchanged.
+- [ ] **Step 5: Update `definition.schema.json` — SPLIT the shared `namedType`.** Today `members` and `params` both `$ref` a single `#/definitions/namedType`. Adding a required `semanticId` to that shared node would break `Param` (unchanged, no semanticId) and fail the existing `FormatSpecConformanceTest` (it serializes a non-empty `params` with a `Param`). So: create `#/definitions/member` = `{name, type, semanticId(required), range(object{low,high}|null)}` and `#/definitions/param` = the OLD `{name, type}` shape; point `members` → `member`, `params` → `param`. Add `"conformsTo": {"type":["string","null"]}` to the top object; keep `additionalProperties:false`. Update descriptions to note the AAS-vocabulary intent (member ≈ AAS `Property`, definition ≈ AAS `Submodel`); optionally fix the stale `templateRef` description (it is the definition's own registry-key id, not a "parent template").
 - [ ] **Step 6: Run** — `mvn -q -pl core test` → `MemberAasShapeTest` passes AND the extended `FormatSpecConformanceTest` (update its sample `UdtDefinition`/`Member` construction to the new shape and re-assert it validates against the updated `definition.schema.json`) passes AND `CompatibilityCheckerTest` unchanged-green.
 - [ ] **Step 7: Commit** — `git add -A && git commit -m "feat(core): AAS-aligned Member (semanticId+range) + Range + UdtDefinition.conformsTo; definition.schema.json updated"`.
 
@@ -100,11 +99,11 @@ public record GeneralSpec(String specRef, String version, String productDomain,
 
 ### Task 1.3: `SpecConformanceChecker` — structural + range (core evaluator)
 
-**Files:** Create `SpecConformanceChecker.java`; test `SpecConformanceCheckerTest.java`.
+**Files:** Create `SpecConformanceChecker.java`, `SpecVerdict.java`; test `SpecConformanceCheckerTest.java`. (Reuse the existing `Violation` record; do NOT reuse `Verdict` — it is `record Verdict(CompatMode mode, boolean compatible, List<Violation>)` and `CompatMode` is a schema-compat-direction concept with no meaning for spec conformance. Use a dedicated result type.)
 
-- [ ] **Step 1: Write the failing test** — `SpecConformanceCheckerTest`: given a `UdtDefinition` (Mixer: Rpm Double [0,3000], Temp Double [0,450], Running Boolean) and a `MasterSpec` with setpoints {Rpm=1500, Temp=200}: `check(def, spec)` → conformant (no violations). Negatives: setpoint member "Ghost" not in def → structural violation; Rpm type "Int32" ≠ def "Double" → type violation; Rpm=9999 > 3000 → range violation; setpoint on a member with null range but a numeric value is allowed (no range constraint).
+- [ ] **Step 1: Write the failing test** — `SpecConformanceCheckerTest`: given a `UdtDefinition` (Mixer: Rpm Double [0,3000], Temp Double [0,450], Running Boolean) and a `MasterSpec` with setpoints {Rpm=1500, Temp=200}: `check(def, spec)` → `SpecVerdict.conformant()==true`, no violations. Negatives: setpoint member "Ghost" not in def → structural violation (conformant false); Rpm type "Int32" ≠ def "Double" → type violation; Rpm=9999 > 3000 → range violation; setpoint on a member with null range but a numeric value is allowed (no range constraint).
 - [ ] **Step 2: Run → FAIL.**
-- [ ] **Step 3: Implement** — `Verdict check(UdtDefinition def, MasterSpec spec)` returning `Verdict(compatible, List<Violation>)` (reuse existing `Verdict`/`Violation`): for each setpoint, find the member by name (structural, else `[spec.member.unknown]`); type-match (`[spec.type.mismatch]`); if member.range != null, assert low ≤ value ≤ high (`[spec.range.below-min]`/`[spec.range.above-max]`).
+- [ ] **Step 3: Implement** — `SpecVerdict.java`: `public record SpecVerdict(boolean conformant, List<Violation> violations) {}`. `SpecConformanceChecker.check(UdtDefinition def, MasterSpec spec)` returns a `SpecVerdict`: for each setpoint, find the member by name (structural, else add `[spec.member.unknown]`); type-match (`[spec.type.mismatch]`); if `member.range() != null`, assert `low ≤ value ≤ high` (`[spec.range.below-min]`/`[spec.range.above-max]`). `conformant = violations.isEmpty()`.
 - [ ] **Step 4: Run → PASS.**
 - [ ] **Step 5: Commit** — `feat(core): SpecConformanceChecker (structural+range: master spec ⊨ equipment model)`.
 
@@ -114,17 +113,17 @@ public record GeneralSpec(String specRef, String version, String productDomain,
 
 - [ ] **Step 1: Write the failing test** — `SpecGateTest` (mirror `SchemaGateTest`, `@TempDir`): seed a registry `udt/Line1-Mixer/1.0.0.json` (Mixer def) + write a master-spec JSON; `SpecGate.run({registryDir, masterSpecFile})` → 0 conformant; out-of-range spec → 1; unknown-member spec → 1; bad args → 2; a master spec whose `equipmentRef@equipmentVersion` isn't in the registry → 2 (error). Add a `GatesCliTest` case: `GatesCli.run({"spec", registryDir, masterSpecFile})` → 0.
 - [ ] **Step 2: Run → FAIL.**
-- [ ] **Step 3: Implement `SpecGate`** — `run(args)`: `if (args.length < 2) usage→2`. Parse `MasterSpec` from `args[1]` via `JsonMapperFactory`. Load the pinned equipment def from `Path.of(args[0]).resolve("udt").resolve(spec.equipmentRef()).resolve(spec.equipmentVersion()+".json")` (NOT `latest()` — pinned version by path convention); if absent → err "equipment <ref>@<ver> not in registry" → 2. `Verdict v = new SpecConformanceChecker().check(def, spec)`; print + return 0 (conformant) / 1 (violations). Wire `case "spec": return SpecGate.run(rest);` into `GatesCli` (usage string → `<schema|spec|policy|provenance>`).
+- [ ] **Step 3: Implement `SpecGate`** — `run(args)`: `if (args.length < 2) usage→2`. Parse `MasterSpec` from `args[1]` via `JsonMapperFactory`. Load the pinned equipment def from `Path.of(args[0]).resolve("udt").resolve(spec.equipmentRef()).resolve(spec.equipmentVersion()+".json")` (NOT `latest()` — pinned version by path convention); if absent → err "equipment <ref>@<ver> not in registry" → 2. `SpecVerdict v = new SpecConformanceChecker().check(def, spec)`; print the violations + return 0 (`v.conformant()`) / 1 (violations). Wire `case "spec": return SpecGate.run(rest);` into `GatesCli` (usage string → `<schema|spec|policy|provenance>`).
 - [ ] **Step 4: Run → PASS.**
 - [ ] **Step 5: Commit** — `feat(gates): SpecGate — gates spec <registryDir> <masterSpecFile> (structural+range) + GatesCli wire`.
 
 ### Task 1.5: `kind` parameterization for master-spec publish
 
-**Files:** Modify `RecipeDefinitionStore.java`, `RecipePublish.java`, `ProvenancePublish.java`; test update.
+**Files:** Modify `RecipeDefinitionStore.java`, `RecipePublish.java`; update tests `RecipeDefinitionStoreTest.java` (6 direct `store.publish(...)` call sites — will fail to compile once a leading `kind` param is added), `RecipePublishTest.java`/`ProvenancePublishTest.java`. NOTE: `ProvenancePublish.java` needs NO change — its `publish` subcommand already does `return RecipePublish.run(rest)` (raw pass-through), so a `--kind` flag flows through automatically; do not add parsing logic there.
 
-- [ ] **Step 1: Write the failing test** — extend `RecipePublishTest`/`ProvenancePublishTest`: publishing with an explicit `kind="master-spec"` yields a manifest whose `kind == "master-spec"`; default (no kind) stays `"recipe-setpoints"` (back-compat).
+- [ ] **Step 1: Write the failing test** — extend `RecipePublishTest`/`ProvenancePublishTest`: publishing with an explicit `--kind master-spec` yields a manifest whose `kind == "master-spec"`; default (no flag) stays `"recipe-setpoints"` (back-compat).
 - [ ] **Step 2: Run → FAIL.**
-- [ ] **Step 3: Implement** — `RecipeDefinitionStore.publish(String kind, String ref, String version, byte[] bytes, String defRef, String sha, String sourcePath, long at)` (add leading `kind` param; the `new RecipeManifest("recipe-setpoints", …)` becomes `new RecipeManifest(kind, …)`). `RecipePublish.run`: accept an optional trailing `--kind <k>` flag (default `recipe-setpoints`); pass through. `ProvenancePublish`: `publish` subcommand forwards a `--kind` if present. Keep all existing call sites working (default kind).
+- [ ] **Step 3: Implement** — `RecipeDefinitionStore.publish(String kind, String ref, String version, byte[] bytes, String defRef, String sha, String sourcePath, long at)` (add leading `kind` param; `new RecipeManifest("recipe-setpoints", …)` → `new RecipeManifest(kind, …)`). Update the 6 `RecipeDefinitionStoreTest` call sites + any core call site to pass `"recipe-setpoints"` explicitly (default). `RecipePublish.run`: accept an optional trailing `--kind <k>` flag (default `recipe-setpoints`); pass it to `publish`. Keep all existing call sites working (default kind). (Wart flagged in the spec: `RecipeDefinitionStore.publish` also hardcodes the on-disk filename `recipe-setpoints.yaml` regardless of `kind`; master-spec bytes therefore land in a file so named — acceptable for the skeleton; leave a one-line code comment noting it.)
 - [ ] **Step 4: Run → PASS** (incl. existing recipe/provenance tests unchanged with default kind).
 - [ ] **Step 5: Commit** — `feat(core,gates): thread kind through publish (master-spec vs recipe-setpoints)`.
 
