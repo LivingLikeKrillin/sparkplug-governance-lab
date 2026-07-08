@@ -47,6 +47,7 @@ resolve Line1/Mixer1.Rpm via getNodeManager().get(newNodeId("Line1/Mixer1.Rpm"))
 ```
 
 - **Lazy resolution at write-time** (not a captured reference), because the instance nodes are created after the Recipe nodes in `createNodes()`. Lazy lookup avoids reordering and is robust.
+- **Value unwrap:** the observer's `value` arg may arrive as a `DataValue` or a raw value — reuse the exact unwrap idiom already in the `Recipe/Rpm` SET observer (a few lines above in `createNodes()`), not a bare `new Variant(value)`.
 - A distinct `[SIM] transfer ...` log line gives the gate a witness for the transfer step, separate from the existing `[SIM] SET ...`.
 - **Units/type:** Heimdall writes `Recipe/Rpm` as a `Double`; the instance member is a `Double`; the transfer copies the `Double` verbatim.
 
@@ -57,8 +58,9 @@ resolve Line1/Mixer1.Rpm via getNodeManager().get(newNodeId("Line1/Mixer1.Rpm"))
 The observer currently writes only `metric.getName()` per NDATA metric. Add value capture **without breaking the existing name-only contract** (the spine gate greps `^Rpm$` on `ndata.txt`):
 
 - Keep `ndata.txt` (names only) unchanged → spine gate no-regression.
-- Emit an **additional** `ndata-values.txt` line per NDATA metric: `name=value` (e.g. `Rpm=1500.0`). The full-loop gate greps `^Rpm=` on this new file for the value assertion.
-- The values file is truncated/created-empty at construction, same discipline as the existing two out files.
+- Emit an **additional** values file, one `name=value` line per NDATA metric (e.g. `Rpm=1500.0`). The full-loop gate greps `^Rpm=` on it for the value assertion.
+- **Non-breaking wiring (mandatory):** the values file is opt-in via a NEW **optional** `observe` flag `--ndata-values <file>` (plumbed as an optional, nullable `MuninnConsumer` constructor param). When the flag is absent — as in the existing spine/muninn gates — no values file is written and their `observe <mqtt> <group> <birthOut> <ndataOut> --expect-ndata N` invocation is byte-for-byte unchanged. Only the new full-loop gate passes `--ndata-values`. Do NOT add a required positional arg (that would shift the spine gate's positional args and break it).
+- When the flag IS present, the values file is truncated/created-empty at construction, same discipline as the existing two out files.
 
 **Rationale for A over feed-side logging:** the closed-loop thesis is that the command changes the **UNS observation**; the UNS consumer (the observer) directly capturing the value change is the most faithful proof.
 
@@ -88,8 +90,9 @@ step 3  MODEL govern (populate the registry so muninn feed can provenance-verify
 step 4  start Heimdall daemon (SPB_GROUP=Bifrost:Line1, POLICY_PATH=heimdall/registry/
         policy.json) → wait "[BRIDGE] ready"
 ─── OBSERVE #1 (before) ───
-step 5  muninn observe#1 (Bifrost:Line1) → muninn feed#1
-        assert: NDATA Rpm=1535.0 (values file)  +  NBIRTH bytes == promoted udt json (reaffirm)
+step 5  muninn observe#1 (Bifrost:Line1, --ndata-values) → muninn feed#1
+        assert: NDATA Rpm=1535.0 (values file)
+        (NBIRTH byte-equality is NOT re-asserted here — it is the spine gate's contract, §2 out-of-scope.)
 ─── COMMAND ───
 step 6  RogueNcmd ns=2;s=Recipe/Rpm 1500 Double
         assert: [BRIDGE] APPLY cmd=...Recipe/Rpm ok=true
