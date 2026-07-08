@@ -77,13 +77,15 @@ These are typed JSON documents authored by MES and committed to Git. `spec.schem
                  {"member": "Temp", "type": "Double", "value": 200} ] }
 ```
 
-`gates spec <masterSpecFile> <registryDir>` → parses the master spec JSON, resolves the referenced equipment model `equipmentRef@equipmentVersion` from the (per-site) registry via `DefinitionStore`, then runs the structural+range check (below). The master spec is pinned to a specific equipment *version* (see lifecycle default). After conformance passes, `gates provenance publish` stamps+publishes the master-spec bytes (content-hash + defRef) — this reuses `RecipePublish`/`RecipeDefinitionStore` unchanged EXCEPT `RecipeDefinitionStore.publish` must be parameterized to accept a `kind` argument (today it hardcodes `kind="recipe-setpoints"`; master-spec publish sets `kind="master-spec"`).
+`gates spec <registryDir> <masterSpecFile>` (see Conformance semantics for the exact contract) → parses the master spec JSON, loads the pinned `equipmentRef@equipmentVersion` equipment model from the (per-site) registry, then runs the structural+range check. After conformance passes, `gates provenance publish` stamps+publishes the master-spec bytes (content-hash + defRef). This reuses `RecipePublish`/`RecipeDefinitionStore` EXCEPT for threading a `kind` through: `RecipeDefinitionStore.publish` hardcodes `kind="recipe-setpoints"` today, so (a) it must take a `kind` arg, and (b) `RecipePublish.run` + the `gates provenance publish` usage must accept a `kind`/artifact-type argument to pass `kind="master-spec"` down. (Minor: `RecipeDefinitionStore.publish` also hardcodes the on-disk filename `recipe-setpoints.yaml`; reused as-is, master-spec bytes land in a file so named — acceptable for the skeleton, flagged for the plan.)
 
 ## Conformance semantics: structural + range
 
-`gates spec <masterSpec> <equipmentModelRef>` checks:
-1. **Structural** — every setpoint key maps to an existing member/Property of the referenced equipment model; value types match.
-2. **Range** — each setpoint value is within the member's model-declared EU range.
+CLI (matches the `SchemaGate` precedent — registry first): **`gates spec <registryDir> <masterSpecFile>`**. It parses the master spec JSON, reads `equipmentRef`/`equipmentVersion` OUT of that JSON, loads the pinned equipment definition from the registry (see note), then checks:
+1. **Structural** — every setpoint's `member` maps to an existing member of the referenced equipment model; value `type`s match.
+2. **Range** — each setpoint value is within that member's model-declared EU `range{low,high}`.
+
+Exit 0 = conformant, 1 = violation (structural or range), 2 = error/usage (mirrors `SchemaGate`/`PolicyGate`). Note: the master spec pins a *specific* `equipmentVersion` (not necessarily latest), and `DefinitionStore` today only exposes `latest(ref)` — `gates spec` loads the pinned version by the known registry path convention (`udt/<ref>/<version>.json`), not `latest()`.
 
 **Single-source-of-truth property (the architecture story — scoped to what this track proves):** the EU range is declared once on the equipment model. **This track PROVES the design-time leg:** `model → gates spec (reject out-of-range at publish)`. The equipment model declares the range in a form Heimdall's runtime authz can later consume — `core.acl.Constraint(type, min, max)` maps directly onto `Member.range{low,high}` — but wiring the range into Heimdall's `CommandAuthorizer` at runtime is a **DEFERRED seam** (Heimdall composes later, see Deferred). So the claim proven here is "one governed source, design-time enforced"; the runtime leg is designed-for but not built/gated in this proof. (Full B2MML / AAS capability-skill matching is also deferred.)
 
@@ -144,7 +146,7 @@ ONE gate script proves the spine composes (run FOREGROUND; controller-verified, 
 ## Implementation sequencing (for the plan; the design stays one coherent spec)
 
 The design is one architectural claim, but execution MUST be chunked into independently-verifiable steps (mirroring the Bifrost-extraction precedent), not one monolithic build:
-1. **Bifrost core additions** — AAS-aligned `Member`/`UdtDefinition` reshape + `definition.schema.json` update; spec model (general/master) + `spec.schema.json`; `gates spec` (structural+range) + `RecipeDefinitionStore.publish` `kind` parameterization + wire the `spec` subcommand into `GatesCli`. Unit-testable with NO cross-repo dependency. **Note: Bifrost is public — these additions are a normal (future) change to the public repo; do not push without explicit OK.**
+1. **Bifrost core additions** — AAS-aligned `Member`/`UdtDefinition` reshape + `definition.schema.json` update; spec model (general/master) + `spec.schema.json`; `gates spec <registryDir> <masterSpecFile>` (structural+range, loads pinned equipment version by path convention) wired into `GatesCli`; `kind` threaded end-to-end for master-spec publish (`RecipeDefinitionStore.publish` + `RecipePublish.run` + `gates provenance publish` usage). Unit-testable with NO cross-repo dependency. **Note: Bifrost is public — these additions are a normal (future) change to the public repo; do not push without explicit OK.**
 2. **sim type-node extension** — expose the Mixer OPC-UA type node (+ instances) for Mímir to browse / Muninn to read.
 3. **Mímir** (new repo) — browse → AAS-aligned definition → `gates schema`.
 4. **Muninn** (new repo) — consume governed definition → provenance-verify → NBIRTH + egress-validated NDATA → MQTT.
