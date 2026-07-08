@@ -42,11 +42,42 @@ Decision — **align, don't reinvent, but stay lightweight:**
 - We do NOT drag the full AAS SDK / AASX packaging / ECLASS-IRDI semanticIds into the skeleton. `semanticId` is a free/local IRI in the skeleton; ECLASS/IRDI alignment is deferred.
 - This maps cleanly onto the modeler/feeder split: **AAS is design-time/exchange-oriented (Mímir's canonical model), OPC-UA is runtime/live-data-oriented (Muninn's wire)** — the split the standards themselves draw.
 
+### Concrete shape (field-level, so a plan can build exact diffs)
+
+`UdtDefinition` is reshaped **IN PLACE** (keep the class name this track to avoid churn; it becomes an AAS-aligned *projection*, not a rename). Today: `UdtDefinition(templateRef, version, List<Member>, List<Param>)` with `Member(name, type)`. After:
+
+- `Member(name, type, String semanticId, Range range)` — `semanticId` = free/local IRI (e.g. `urn:bifrost:sem:Mixer/Rpm`); `range = {low, high}` nullable (non-null only for numeric setpoint-eligible members). The range source already exists in the Mímir seed: lab `opcua/UaEngInfo(unit, low, high)`.
+- `UdtDefinition` gains a reserved nullable `conformsTo` pointer (the enterprise-template parent id — unused/null this track, see seams §4).
+- **`definition.schema.json`** (published contract) is updated: add `semanticId` (string) + `range` (object `{low:number, high:number}` | null) to the member object; keep `additionalProperties:false` (so the new fields are explicitly part of the contract). The AAS-vocabulary intent is documented in the schema `description`s (e.g. member ≈ AAS `Property`, the definition ≈ AAS `Submodel`).
+- **`CompatibilityChecker`** reads only `Member::name/type` for semantic compat — it is UNCHANGED (semanticId/range are additive; they do not participate in the ① compat relation). Only the NEW `gates spec` conformance reads `range`.
+- Milestone note: turning this into a *strict* projection of an IDTA-registered AAS Submodel Template is deferred (Open Question #5); this track only adopts the vocabulary + the range/semanticId fields.
+
 ## Spec model: ISA-88 two-layer (general + master)
 
-- **General spec** (product-domain scope, spans sites): equipment-independent product intent, corporate/product-line-authored. Governed by Bifrost for FORMAT (schema).
+- **General spec** (product-domain scope, spans sites): equipment-INDEPENDENT product intent, corporate/product-line-authored. Declares setpoint intents by LOGICAL key (no equipment nodeId). Governed by Bifrost for FORMAT (schema).
 - **Master spec** (binds to a site's process cell): the general spec bound to a specific site equipment model's members, with concrete setpoints. Governed by Bifrost for **conformance to the site equipment model** + provenance.
 - Control recipe (per-batch runtime) is OUT of scope (deferred).
+
+### Concrete document schemas (NEW — no existing prototype seeds this; `gates spec` parses these as typed JSON, distinct from the opaque-blob publish)
+
+These are typed JSON documents authored by MES and committed to Git. `spec.schema.json` (NEW, published alongside `definition.schema.json`) describes both shapes. Minimal skeleton shapes:
+
+**General spec** — equipment-independent:
+```json
+{ "specRef": "MixProductA", "version": "1.0.0", "productDomain": "MixProductA",
+  "setpointIntents": [ {"key": "mixSpeed", "type": "Double", "value": 1500},
+                       {"key": "mixTemp",  "type": "Double", "value": 200} ] }
+```
+
+**Master spec** — binds the general intent to a SITE equipment model (this is the artifact `gates spec` conforms + `gates provenance` publishes):
+```json
+{ "specRef": "MixProductA", "version": "1.0.0", "site": "Line1",
+  "equipmentRef": "Line1-Mixer", "equipmentVersion": "1.0.0",
+  "setpoints": [ {"member": "Rpm",  "type": "Double", "value": 1500},
+                 {"member": "Temp", "type": "Double", "value": 200} ] }
+```
+
+`gates spec <masterSpecFile> <registryDir>` → parses the master spec JSON, resolves the referenced equipment model `equipmentRef@equipmentVersion` from the (per-site) registry via `DefinitionStore`, then runs the structural+range check (below). The master spec is pinned to a specific equipment *version* (see lifecycle default). After conformance passes, `gates provenance publish` stamps+publishes the master-spec bytes (content-hash + defRef) — this reuses `RecipePublish`/`RecipeDefinitionStore` unchanged EXCEPT `RecipeDefinitionStore.publish` must be parameterized to accept a `kind` argument (today it hardcodes `kind="recipe-setpoints"`; master-spec publish sets `kind="master-spec"`).
 
 ## Conformance semantics: structural + range
 
@@ -54,7 +85,7 @@ Decision — **align, don't reinvent, but stay lightweight:**
 1. **Structural** — every setpoint key maps to an existing member/Property of the referenced equipment model; value types match.
 2. **Range** — each setpoint value is within the member's model-declared EU range.
 
-**Single-source-of-truth property (the strong architecture story):** the EU range is declared once on the equipment model and travels: `model → spec gate (design-time reject out-of-range) → Heimdall ② (runtime authz bound)`. Design-time and runtime enforcement derive from the same governed source. (Full B2MML / AAS capability-skill matching is deferred.)
+**Single-source-of-truth property (the architecture story — scoped to what this track proves):** the EU range is declared once on the equipment model. **This track PROVES the design-time leg:** `model → gates spec (reject out-of-range at publish)`. The equipment model declares the range in a form Heimdall's runtime authz can later consume — `core.acl.Constraint(type, min, max)` maps directly onto `Member.range{low,high}` — but wiring the range into Heimdall's `CommandAuthorizer` at runtime is a **DEFERRED seam** (Heimdall composes later, see Deferred). So the claim proven here is "one governed source, design-time enforced"; the runtime leg is designed-for but not built/gated in this proof. (Full B2MML / AAS capability-skill matching is also deferred.)
 
 ## Muninn's runtime governance (governance downstream)
 
@@ -86,10 +117,12 @@ One piece of equipment threads the entire spine: a **"Line1 Mixer"** type with m
 
 **Zero shared code** across repos — Mímir/Muninn/MES integrate with Bifrost only via the published data/wire contract (JSON schema + Sparkplug/OPC-UA wire + gate CLIs + published-manifest bytes), each modeling the format in its own types.
 
+**Cross-repo invocation mechanism (by process, no code dependency):** Mímir and MES cross Bifrost's governance by invoking the **built `bifrost-gates.jar` as a subprocess** (`java -jar .../bifrost/gates/target/bifrost-gates.jar schema|spec|provenance ...`) — the same "gates = CI tools, called out to" pattern the koshei/resequence seams already use. Repos are sibling checkouts under `Labs/[iiot]/` (`bifrost/`, `mimir/`, `muninn/`); paths are resolved by sibling-relative path + `cygpath -m` for the native JVM. The **end-to-end integration gate script lives in `bifrost/scripts/run-pantheon-spine-gate.sh`** (Bifrost is the hub) and orchestrates: the sim, the `bifrost-gates.jar`, and the built `mimir`/`muninn` jars (`../mimir/target/*.jar`, `../muninn/target/*.jar`), plus an MQTT broker (reuse `bifrost/docker-compose.yml`'s HiveMQ CE). No shared Maven dependency is introduced anywhere.
+
 ## Enterprise-ready seams (so the enterprise layer is additive, not a rewrite)
 
 The enterprise-template layer is deferred, but the skeleton must not preclude it. The enterprise layer is fundamentally "the same conformance relation, one level up," so we build these seams now:
-1. **Hierarchical identity** — equipment ref `enterprise:site:type@version`, spec ref `enterprise:productDomain:...` + site-binding; `enterprise` defaults to a constant now, but the slot exists.
+1. **Hierarchical identity** — equipment ref `enterprise:site:type@version`, spec ref `enterprise:productDomain:...` + site-binding; `enterprise` defaults to a constant now, but the slot exists. ⚠ This colon form is a **LOGICAL/display id only** — the on-disk registry MUST NOT use it as a literal path segment (`:` is a Windows-reserved char; today `DefinitionStore`/`RecipeDefinitionStore` do `root.resolve(templateRef)`). The store uses **nested path segments** `<registryRoot>/<enterprise>/<site>/<type>/<version>/` and the CLIs pass the scope components as separate args (or a filesystem-safe encoding), reserving the colon string for logging/display. This track keeps `enterprise` as a constant dir (e.g. `default/`) so the nesting exists but is shallow.
 2. **Reference-parameterized conformance** — gates already take the registry/model ref as an argument; keep that (so a future `site-model ⊨ enterprise-template` is the same gate pointed at a different reference).
 3. **Reserved `conformsTo`/extends pointer** on the equipment definition (a site model may later declare its enterprise-template parent) — distinct from the type's own id.
 4. **Scope-carrying manifest** — the published manifest self-describes `site` (now) and reserves `enterprise` — consumers know which scope an artifact came from by bytes.
@@ -107,6 +140,17 @@ ONE gate script proves the spine composes (run FOREGROUND; controller-verified, 
    - a non-conformant NDATA sample (extra member / wrong type) → Muninn drops it, never reaches the UNS;
    - the NBIRTH definition bytes equal the governed registry bytes.
 5. `[GATE] PASS`.
+
+## Implementation sequencing (for the plan; the design stays one coherent spec)
+
+The design is one architectural claim, but execution MUST be chunked into independently-verifiable steps (mirroring the Bifrost-extraction precedent), not one monolithic build:
+1. **Bifrost core additions** — AAS-aligned `Member`/`UdtDefinition` reshape + `definition.schema.json` update; spec model (general/master) + `spec.schema.json`; `gates spec` (structural+range) + `RecipeDefinitionStore.publish` `kind` parameterization + wire the `spec` subcommand into `GatesCli`. Unit-testable with NO cross-repo dependency. **Note: Bifrost is public — these additions are a normal (future) change to the public repo; do not push without explicit OK.**
+2. **sim type-node extension** — expose the Mixer OPC-UA type node (+ instances) for Mímir to browse / Muninn to read.
+3. **Mímir** (new repo) — browse → AAS-aligned definition → `gates schema`.
+4. **Muninn** (new repo) — consume governed definition → provenance-verify → NBIRTH + egress-validated NDATA → MQTT.
+5. **MES fixtures + the one integration gate** (`bifrost/scripts/run-pantheon-spine-gate.sh`) — tie it together; the 5 assertions.
+
+Each chunk is controller-verified (build + its own gate/tests) before the next, exactly as the Bifrost extraction was.
 
 ## Deferred (YAGNI, explicit)
 
