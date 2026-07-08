@@ -18,9 +18,9 @@
 | **Heimdall** | A module *inside* Bifrost: the runtime write-boundary **daemon** (the gatekeeper who guards the bridge). Southbound governed writes. | YES (a module) |
 | **Mímir** | The northbound **modeler** (design-time): reads OT type spaces → *proposes* canonical UDT definitions to Bifrost's ① gate. Keeper of the well of wisdom (= the definitions/knowledge). A separate product. | No — separate track |
 | **Muninn** | The northbound **feeder** (runtime): consumes *governed* definitions → streams live OT instance data → the UNS. Odin's raven "memory" — observes the world and brings knowledge back to the centre (OT→SSoT, direction matches). A separate product. | No — separate track |
-| **Verðandi** | A **field EAI/ETL platform**: a Node-RED replacement for gluing heterogeneous sources, with Saga (idempotency + compensation) added. A separate product. | No — separate track |
+| **Mjölnir** | A **field EAI/ETL platform**: a Node-RED replacement for gluing heterogeneous sources, with Saga (idempotency + compensation) added. A separate product. | No — separate track |
 
-Bifrost governs; Heimdall (inside it) enforces at the write boundary; Mímir *proposes* canonical definitions (upstream of governance); Muninn *feeds* the UNS with data conforming to the governed definitions (downstream); Verðandi glues field integrations with durable saga. **Distinct applications**, each consuming the others only through published data/wire contracts.
+Bifrost governs; Heimdall (inside it) enforces at the write boundary; Mímir *proposes* canonical definitions (upstream of governance); Muninn *feeds* the UNS with data conforming to the governed definitions (downstream); Mjölnir glues field integrations with durable saga. **Distinct applications**, each consuming the others only through published data/wire contracts.
 
 **Canonical-model ownership (three layers, so Bifrost's boundary is unambiguous):**
 - **Authority / ownership → Bifrost.** "Owning the canonical model" means deciding what a valid definition *is*, versioning it, and admitting it to the registry-of-record — which is exactly what ① does. Bifrost is the single authority; it publishes the format spec (§4).
@@ -47,7 +47,7 @@ The three governance obligations (the blog's "three bills") that constitute Bifr
 
 **Non-Goals**
 
-- The northbound feeder (**Mímir**) and the field EAI/ETL platform (**Verðandi**) — separate tracks.
+- The northbound feeder (**Mímir**) and the field EAI/ETL platform (**Mjölnir**) — separate tracks.
 - Deep redesign of `sparkplug-governance-lab` (its future as a Mímir prototype / experimentation ground) — a follow-up. This spec only reconciles it enough to keep it building.
 - Deployment hardening beyond a runnable jar/CLI (containerization, vendor-server cert lockdown, provenance-at-gateway) — roadmap.
 - Real-plant / real-PLC / certificate-secured OPC-UA validation — hypothesis; simulator only.
@@ -133,7 +133,7 @@ Ported tests: `CommandAuthorizerTest`, `CommandPolicyGateTest`, `OpaCommandAutho
 - **`resequence-twin-lab`:** consumes the ③ published manifest — reads the bytes, recomputes the raw-byte hash, verifies against the manifest. Publisher changes to Bifrost; the mechanism is unchanged. This is the reference example of the §4 pattern.
 - **Mímir (future):** proposes canonical UDT definitions derived from OT type spaces to Bifrost's ① gate (upstream producer). Data contract only.
 - **Muninn (future):** consumes Bifrost's governed definitions to shape live OT data into conforming canonical instances and feed the UNS (downstream feeder). Data contract only. Separated from Mímir by Bifrost's governance (no bypass).
-- **Verðandi:** unrelated to this track.
+- **Mjölnir:** unrelated to this track.
 
 ## 7. Migration phasing (executed by the plan)
 
@@ -168,7 +168,7 @@ The spec defines the target; the plan sequences it so each step verifies indepen
 - **CI-lint vs runtime drift** *(internal).* *Mitigation:* `heimdall` and `gates` share `core`; one rule library.
 - **Provenance byte-agreement across the publisher change.** *Mitigation:* preserve raw-binary hashing exactly; the twin's independent recompute test is the guard.
 - **Lab value-type divergence.** The lab's copy could diverge from the published format. *Mitigation:* the lab conforms to the published schema; a lab-side conformance check can consume the published schema. Divergence is caught the same way any consumer's is.
-- **Scope creep** into Mímir / Verðandi / deployment hardening. *Mitigation:* Non-Goals fence them.
+- **Scope creep** into Mímir / Mjölnir / deployment hardening. *Mitigation:* Non-Goals fence them.
 
 ## 11. Resolved decisions
 
@@ -176,5 +176,5 @@ The spec defines the target; the plan sequences it so each step verifies indepen
 - "Heimdall" → the **runtime daemon module only** (the independent app), not the whole engine.
 - Internal structure → three kinds: `core` (library) / `heimdall` (daemon) / `gates` (CLIs).
 - Consumer contract → **language-neutral data/wire format only; no shared code artifact** (rejected the `bifrost-model` Maven dependency — it would force JVM consumers and betray independence). Consumers own their types; the format spec is the published contract; the ① gate governs its evolution.
-- Northbound OT→UNS feeder (**Mímir**), field EAI/ETL (**Verðandi**) → separate products/tracks, out of scope.
+- Northbound OT→UNS feeder (**Mímir**), field EAI/ETL (**Mjölnir**) → separate products/tracks, out of scope.
 - Lab → keeps its own consumer value types; loses only governance logic; consumes Bifrost by process + data contract.
