@@ -17,15 +17,15 @@
 | **Bifrost** | The governance **product** (repo): governs definitions/policies and guards the IT→OT write boundary. The rainbow bridge between realms. | **YES — this spec** |
 | **Heimdall** | A module *inside* Bifrost: the runtime write-boundary **daemon** (the gatekeeper who guards the bridge). Southbound governed writes. | YES (a module) |
 | **Mímir** | The northbound **modeler** (design-time): reads OT type spaces → *proposes* canonical UDT definitions to Bifrost's ① gate. Keeper of the well of wisdom (= the definitions/knowledge). A separate product. | No — separate track |
-| **Gná** | The northbound **feeder** (runtime): consumes *governed* definitions → streams live OT instance data → the UNS. Frigg's swift messenger (the data courier OT→UNS). A separate product. | No — separate track |
+| **Muninn** | The northbound **feeder** (runtime): consumes *governed* definitions → streams live OT instance data → the UNS. Odin's raven "memory" — observes the world and brings knowledge back to the centre (OT→SSoT, direction matches). A separate product. | No — separate track |
 | **Verðandi** | A **field EAI/ETL platform**: a Node-RED replacement for gluing heterogeneous sources, with Saga (idempotency + compensation) added. A separate product. | No — separate track |
 
-Bifrost governs; Heimdall (inside it) enforces at the write boundary; Mímir *proposes* canonical definitions (upstream of governance); Gná *feeds* the UNS with data conforming to the governed definitions (downstream); Verðandi glues field integrations with durable saga. **Distinct applications**, each consuming the others only through published data/wire contracts.
+Bifrost governs; Heimdall (inside it) enforces at the write boundary; Mímir *proposes* canonical definitions (upstream of governance); Muninn *feeds* the UNS with data conforming to the governed definitions (downstream); Verðandi glues field integrations with durable saga. **Distinct applications**, each consuming the others only through published data/wire contracts.
 
 **Canonical-model ownership (three layers, so Bifrost's boundary is unambiguous):**
 - **Authority / ownership → Bifrost.** "Owning the canonical model" means deciding what a valid definition *is*, versioning it, and admitting it to the registry-of-record — which is exactly what ① does. Bifrost is the single authority; it publishes the format spec (§4).
 - **Production → Mímir (or a human).** Proposes definitions (bottom-up from OT, or top-down). Upstream of governance; not the owner.
-- **Representation → each consumer.** The lab, Gná, `resequence-twin-lab` each hold their own local types conforming to the published format. Code-ownership (each has its own types) ≠ model-authority (Bifrost, single).
+- **Representation → each consumer.** The lab, Muninn, `resequence-twin-lab` each hold their own local types conforming to the published format. Code-ownership (each has its own types) ≠ model-authority (Bifrost, single).
 - **Invariant:** production and feeding are separated by governance — a proposed definition is not authoritative (and Gná must not feed data against it) until Bifrost's ① gate admits it. No path bypasses Bifrost.
 
 The three governance obligations (the blog's "three bills") that constitute Bifrost:
@@ -132,7 +132,7 @@ Ported tests: `CommandAuthorizerTest`, `CommandPolicyGateTest`, `OpaCommandAutho
 - **`sparkplug-governance-lab`:** owns its value types (its representation of the definition format); reads/writes the same `registry/` JSON layout; invokes Bifrost's gate CLIs and runs the Heimdall daemon as processes for its gate scripts / runtime demos. No code dependency on Bifrost.
 - **`resequence-twin-lab`:** consumes the ③ published manifest — reads the bytes, recomputes the raw-byte hash, verifies against the manifest. Publisher changes to Bifrost; the mechanism is unchanged. This is the reference example of the §4 pattern.
 - **Mímir (future):** proposes canonical UDT definitions derived from OT type spaces to Bifrost's ① gate (upstream producer). Data contract only.
-- **Gná (future):** consumes Bifrost's governed definitions to shape live OT data into conforming canonical instances and feed the UNS (downstream feeder). Data contract only. Separated from Mímir by Bifrost's governance (no bypass).
+- **Muninn (future):** consumes Bifrost's governed definitions to shape live OT data into conforming canonical instances and feed the UNS (downstream feeder). Data contract only. Separated from Mímir by Bifrost's governance (no bypass).
 - **Verðandi:** unrelated to this track.
 
 ## 7. Migration phasing (executed by the plan)
