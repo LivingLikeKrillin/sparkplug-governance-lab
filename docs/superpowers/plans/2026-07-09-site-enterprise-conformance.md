@@ -22,7 +22,7 @@
 | `core/.../conformance/adapter/CfihosTemplateAdapter.java` | CFIHOS equipment-class tree → UdtDefinition | Create |
 | `core/.../conformance/adapter/AasSubmodelAdapter.java` | AAS submodel-template tree → UdtDefinition | Create |
 | `gates/.../TemplateGate.java` | `gates template <registryDir> <siteDefFile>` (mirror `SpecGate`) | Create |
-| `gates/.../AdaptTemplate.java` | `gates adapt-template <ignition\|cfihos\|aas> <extFile> <outFile>` CLI | Create |
+| `gates/.../AdaptTemplate.java` | `gates adapt-template <ignition\|cfihos\|aas> <extFile> <outFile> <ref> <version>` CLI (5 args) | Create |
 | `gates/.../GatesCli.java` | add `template` + `adapt-template` legs + usage | Modify |
 | `scripts/fixtures/template/*` | native template, conforming + 3 violating sites, Ignition/CFIHOS/AAS externals | Create |
 | `scripts/run-template-conformance-gate.sh` | P1 accept / P2×3 reject / P3 three-adapter equivalence | Create |
@@ -295,7 +295,7 @@ public final class IgnitionUdtAdapter implements TemplateAdapter {
 
 ### Task 5: `AasSubmodelAdapter`
 
-**Files:** Create `core/.../conformance/adapter/AasSubmodelAdapter.java` + test. FOREIGN vocabulary = AAS submodel JSON: `submodelElements[]` of `modelType:"Property"` with `idShort`(→name), `valueType:"xs:double"`(→"Double"), native `semanticId.keys[0].value`(IRI → semanticId — AAS carries it natively), and range via `qualifiers[]` (`{type:"Min",value:"0"}`,`{type:"Max",value:"15"}`) → Range. Test: `adapt(aasFixture) ≡ native` (fixture uses AAS vocabulary). Steps mirror Task 3. Commit: `feat(core): AasSubmodelAdapter (Industrie-4.0 submodel -> canonical; native semanticId)`.
+**Files:** Create `core/.../conformance/adapter/AasSubmodelAdapter.java` + test. FOREIGN vocabulary = AAS submodel JSON: `submodelElements[]` of `modelType:"Property"` with `idShort`(→name), `valueType:"xs:double"`(→"Double"), native `semanticId.keys[0].value`(IRI → semanticId — AAS carries it natively), and range via `qualifiers[]` (`{type:"Min",value:"0"}`,`{type:"Max",value:"15"}`) → Range. Test: `adapt(aasFixture) ≡ native` (fixture uses AAS vocabulary). Steps mirror Task 3. **Two transforms to get right (the equivalence test guards them):** AAS qualifier `value`s are STRINGS (`"0"`/`"15"`) → `Double.parseDouble(...)`; `semanticId` is NESTED → navigate `el.path("semanticId").path("keys").get(0).path("value").asText()`. Commit: `feat(core): AasSubmodelAdapter (Industrie-4.0 submodel -> canonical; native semanticId)`.
 
 ### Task 6: `gates adapt-template` CLI (so the gate can invoke adapters as a subprocess)
 
@@ -313,7 +313,7 @@ public final class IgnitionUdtAdapter implements TemplateAdapter {
 
 ### Task 7: fixtures + `run-template-conformance-gate.sh`
 
-**Files:** Create under `scripts/fixtures/template/`: `native-template.json` (WeldController-corp UdtDefinition, the enterprise standard), `site-conforming.json` (conformsTo, tightened+extended → accept), `site-exceeds.json` / `site-missing.json` / `site-semanticid.json` (the 3 violations), and the 3 externals `ext-ignition.json` / `ext-cfihos.json` / `ext-aas.json` (**each in its OWN foreign vocabulary — a grep for Bifrost field names `members`/`type`/`range`/`low`/`high` on these three MUST return nothing**). Create `scripts/run-template-conformance-gate.sh` (mirror `run-spec-gate.sh` — pure CLI, NO Docker; build `gates/target/bifrost-gates.jar` if missing).
+**Files:** Create under `scripts/fixtures/template/`: `native-template.json` (WeldController-corp UdtDefinition, the enterprise standard), `site-conforming.json` (conformsTo, tightened+extended → accept), `site-exceeds.json` / `site-missing.json` / `site-semanticid.json` (the 3 violations), and the 3 externals `ext-ignition.json` / `ext-cfihos.json` / `ext-aas.json` (**each in its OWN foreign vocabulary — a grep for Bifrost field names `members`/`type`/`range`/`low`/`high` on these three MUST return nothing**). Create `scripts/run-template-conformance-gate.sh` (mirror `run-spec-gate.sh` — pure CLI, NO Docker; build `gates/target/bifrost-gates.jar` if missing). **Carry over `run-spec-gate.sh`'s Windows/Git-Bash discipline: convert every path with `cygpath -m` before `java -jar`** (POSIX-style paths fail the JVM here). **Non-circularity grep must target the QUOTED JSON key `"low"`/`"members"` (NOT bare `low` — the Ignition fixture's `engLow` contains the substring `low`).**
 
 - [ ] **Step 1: Write the gate script** — assertions (each runs `java -jar gates.jar template …` / `adapt-template …`):
   - **P1 accept:** set up `$WORK/reg/udt/WeldController-corp/1.0.0.json` = native-template; `gates template $WORK/reg site-conforming.json` → exit 0.
