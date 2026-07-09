@@ -20,7 +20,7 @@ This track adds the first **prescriptive model governance**: a site's equipment 
 
 ## 3. Architecture — ports & adapters (dependency inversion)
 
-All in bifrost (`core`/`gates`; mirrors the existing `SpecGate`/`SpecConformanceChecker`→`ConformanceEvaluator` patterns). No new repo. No runtime; design-time gate.
+All in bifrost (`core`/`gates`; mirrors the existing `SpecGate` → `core.conformance.ConformanceEvaluator` pattern — a pure checker returning a `ConformanceVerdict`, invoked by a thin gate). No new repo. No runtime; design-time gate.
 
 ```
               ┌──────────── CORE (invariant, depends on NOTHING external) ────────────┐
@@ -47,11 +47,11 @@ Pure function: `ConformanceVerdict check(UdtDefinition siteDef, UdtDefinition en
 - **semanticId match** — site member semanticId == template member semanticId (the corporate-dictionary IRI). `template.semanticId.mismatch`.
 - **range envelope** — site member range ⊆ template member range (site `low ≥` template `low` AND site `high ≤` template `high`; site may tighten, not exceed). `template.range.exceeds-envelope`. (A null site range against a bounded template range = violation "unbounded exceeds envelope"; a null template range = no envelope constraint.)
 
-Reuses `core.schema.{UdtDefinition,Member,Range}` and `core.conformance.{ConformanceVerdict, Violation}` (Violation ids in a distinct `template.*` namespace). Violations accumulate (report all).
+Reuses `core.schema.{UdtDefinition,Member,Range,Violation}` and `core.conformance.ConformanceVerdict` (note: `Violation` lives in `core.schema`, NOT `core.conformance` — same import `ConformanceEvaluator` uses). Template rule ids in a distinct `template.*` namespace. Violations accumulate (report all).
 
 ### 3.2 The port + adapters
 - **Port** = `UdtDefinition` (existing). The enterprise template, whatever its source shape, is represented internally as a `UdtDefinition` (all members required; ranges are envelopes).
-- **`IgnitionUdtAdapter`** (primary, commercial): maps an **Ignition UDT export JSON** → `UdtDefinition`. Ignition exports UDTs as tag JSON (tags with `dataType`, `engUnit`/`engLow`/`engHigh`, nested members). Mapping: tags→members, Ignition `dataType`→our `type`, `engLow`/`engHigh`→`range`, a documented convention for `semanticId` (Ignition tags carry no corporate IRI natively → synthesize from a documented convention OR a custom UDT property). **The fixture should be a REAL export from Ignition Maker Edition** (authentic) or, if unavailable, hand-authored to Ignition's documented UDT-export schema (noted honestly).
+- **`IgnitionUdtAdapter`** (primary, commercial): maps an **Ignition UDT export JSON** → `UdtDefinition`. Ignition exports UDTs as tag JSON (tags with `dataType`, `engUnit`/`engLow`/`engHigh`, nested members). **The load-bearing, genuinely non-trivial transformation is type + range:** Ignition `dataType` (e.g. `"Float8"`/`"Int4"`) → our `type` (`"Double"`), and `engLow`/`engHigh` → `Range(low,high)` — a real vocabulary+structure remap, NOT a rename. `tags` → `members`. **`semanticId` is an HONEST CARRIED value, not the proof's centerpiece:** Ignition produces no corporate IRI natively, so the IRI rides in a designated custom UDT property that the adapter reads verbatim (documented — §3.3); if that property is absent the adapter records a documented drop. So P3's equivalence is earned by the type+range adapter LOGIC, with semanticId explicitly acknowledged as carried, not engineered. **Confirm exact Ignition key casing against a real export at implementation.** The fixture should be a REAL export from Ignition Maker Edition (authentic); if unavailable, hand-authored to Ignition's documented UDT-export schema (noted honestly).
 - **`CfihosTemplateAdapter`** (secondary, for pluggability-vividness — DROPPABLE): maps a CFIHOS-flavored equipment-class JSON (`properties[]` with IRI `propertyId`, `datatype:"REAL"`, `minValue`/`maxValue`, `requirement:"M"/"O"`) → `UdtDefinition`.
 
 ### 3.3 Honest impedance handling (architect maturity, not a lossless pretense)
@@ -61,7 +61,7 @@ Adapters make **explicit, documented decisions** where external semantics don't 
 - CFIHOS `uom`, Ignition `engUnit` → not yet modeled internally → carried as a documented drop (units = future additive extension).
 
 ## 4. `gates template` — the prescriptive gate
-New `GatesCli` leg + `TemplateGate` mirroring `SpecGate`: `gates template <registryDir> <siteDefFile>` — loads the site `UdtDefinition`, reads its `conformsTo` (`ref@version`), loads the enterprise template from `registryDir` (`udt/<ref>/<version>.json`) via `DefinitionStore`, runs `TemplateConformanceChecker`, prints `[GATE] … PASS/FAIL + violations`, exit `0` conform / `1` violations / `2` error. A site model is thus **admitted only if it conforms to the enterprise standard it claims** — prescriptive, not change-control.
+New `GatesCli` leg (add `template` to both the dispatch `switch` and the `<schema|spec|policy|provenance>` usage string) + `TemplateGate` mirroring `SpecGate`: `gates template <registryDir> <siteDefFile>` — loads the site `UdtDefinition`, reads its `conformsTo` (`ref@version`), loads the enterprise template from `registryDir` (`udt/<ref>/<version>.json`) via `DefinitionStore`, runs `TemplateConformanceChecker`, prints `[GATE] … PASS/FAIL + violations`, exit `0` conform / `1` violations / `2` error. A site model is thus **admitted only if it conforms to the enterprise standard it claims** — prescriptive, not change-control.
 
 ## 5. Killer proof — `run-template-conformance-gate.sh`
 
@@ -70,6 +70,7 @@ Automotive multi-plant example. Enterprise template `WeldController-corp@1.0.0`:
 - **P1 native ACCEPT:** site `Ulsan-Weld@1.0.0` conformsTo corp, tightened+extended (WeldCurrent[0,12], +WeldVoltage) → `gates template` exit 0.
 - **P2 native REJECTs (3 legs, exit 1 each):** exceeds-envelope (WeldCurrent[0,20]) · member-missing (drop WeldTime) · semanticId-mismatch (`ulsan:current`).
 - **P3 ⭐ adapter equivalence (the platform proof):** the SAME enterprise standard expressed as an **Ignition UDT export** → `IgnitionUdtAdapter` → `UdtDefinition` that is **semantically identical** to the native template; run the SAME `gates template` → **identical verdicts to P1/P2**. Repeat with the **CFIHOS-flavored** shape → same. Assert: `adapt(external) ≡ native` (equal `UdtDefinition`) AND identical conformance verdicts AND the checker/gate code is **byte-identical across all three sources**. → "standards are pluggable; the governance core is standard-agnostic; a new standard is an additive adapter, core untouched."
+  - **NON-CIRCULARITY ACCEPTANCE CRITERION (mandatory):** the external fixtures MUST use the standards' OWN field vocabulary — Ignition `dataType`/`engLow`/`engHigh`/`tags`; CFIHOS `properties`/`propertyId`/`datatype`/`minValue`/`maxValue`/`requirement` — and MUST NOT use Bifrost field names (`members`/`type`/`range`/`low`/`high`). Equivalence must be produced by adapter LOGIC, never by fixtures pre-shaped to resemble `UdtDefinition`. (A reviewer/test grepping the external fixtures must find the foreign vocabulary, not Bifrost's.)
 
 ## 6. Scope
 
