@@ -162,7 +162,9 @@ package dev.krillin.bifrost.core.activation;
 /** Result of verifying a ledger's hash chain. intact => brokenIndex and rule are null; on a break,
  *  the FIRST break's zero-based index and rule slug. */
 public record ChainVerdict(boolean intact, Integer brokenIndex, String rule) {
-    public static ChainVerdict intact() { return new ChainVerdict(true, null, null); }
+    // NOTE: the "all good" factory is whole(), NOT intact() — a record auto-generates the accessor
+    // intact(), so a static intact() factory is an override-equivalent name clash and will NOT compile.
+    public static ChainVerdict whole()  { return new ChainVerdict(true, null, null); }
     public static ChainVerdict broken(int index, String rule) { return new ChainVerdict(false, index, rule); }
 }
 ```
@@ -214,7 +216,7 @@ public final class LedgerChain {
             if (i > 0 && !entries.get(i - 1).entryHash().equals(en.prevHash()))
                 return ChainVerdict.broken(i, "ledger.chain.prev-link-broken");
         }
-        return ChainVerdict.intact();
+        return ChainVerdict.whole();
     }
 }
 ```
@@ -431,7 +433,7 @@ Expected: FAIL — the `activation` subcommand routes nowhere / returns 2 for th
             case "activation":
                 return ActivateGate.run(args);
 ```
-(Update the two `Usage:` strings to include `activation`.)
+(Update both `GatesCli` usage mentions — the `System.err` `Usage:` string and the class javadoc — to include `activation`. Also update `ActivateGate.usage()`'s `<activate|active|activation-log>` string to `<activate|active|activation-log|activation>` for consistency. Cosmetic but keeps the help text truthful.)
 
 `ActivateGate.run` — add the `activation` case and the handler:
 ```java
@@ -484,24 +486,22 @@ git commit -m "feat(gates): activation verify-chain CLI leg — 0 intact / 1 tam
 
 - [ ] **Step 1: Write the failing test** (add a broken-chain case; mirror the existing content-mismatch test's setup)
 
-```java
-    @Test void broken_ledger_chain_fails_closed(@TempDir java.nio.file.Path reg) throws Exception {
-        // Arrange: a recipe-mode conformance policy + spec/mix/1.0.0.json + an activation ledger with
-        // an ACTIVATE of mix@1.0.0 (reuse the same helpers the existing activation-bind test uses).
-        // ... build registry exactly as the existing "binds active version" test does ...
-        // Then tamper the ledger file out-of-band so its chain is broken:
-        java.nio.file.Path f = reg.resolve("activation").resolve("Line1.jsonl");
-        java.util.List<String> lines = java.nio.file.Files.readAllLines(f);
-        lines.set(0, lines.get(0).replace("\"bob\"","\"eve\""));
-        java.nio.file.Files.write(f, lines);
+Reuse the existing test's helpers verbatim — the `@BeforeEach setup(@TempDir Path dir)` already builds the registry (udt + `spec/mix-recipe/{1.0.0,1.1.0}.json` + recipe-mode `conformance.json`) and sets the `reg` field; `activate(String ver)` appends an ACTIVATE via `ActivationService`; `cfg()` returns a `Config` with `activationPath=reg`, `activationTarget="Line1"`; invocation is the package-private `NcmdOpcUaBridgeMain.loadConformance(cfg())`. The ledger file is therefore at `reg/activation/Line1.jsonl`. Add exactly this test (no new helpers):
 
-        // Act + Assert: loadConformance with ACTIVATION_TARGET=Line1 must throw, mentioning the rule,
-        // and never bind.
-        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> loadConformanceForTest(reg, "Line1"));
+```java
+    @Test void brokenLedgerChainFailsClosed() throws Exception {
+        activate("1.0.0");
+        // out-of-band tamper: editing approvedBy on entry-0's raw JSONL line breaks its self-hash
+        // (approvedBy "bob" occurs once), so verifyChain fails BEFORE the active pointer is read.
+        Path f = reg.resolve("activation").resolve("Line1.jsonl");
+        List<String> lines = Files.readAllLines(f);
+        lines.set(0, lines.get(0).replace("\"bob\"", "\"eve\""));
+        Files.write(f, lines);
+        var ex = assertThrows(Exception.class, () -> NcmdOpcUaBridgeMain.loadConformance(cfg()));
         assertTrue(ex.getMessage().contains("activation.edge.ledger-chain-broken"), ex.getMessage());
     }
 ```
-(Use whatever registry-building + invocation helper the existing `LoadConformanceActivationTest` already uses for its content-mismatch / happy-path cases — this test only adds the out-of-band tamper + the broken-chain assertion. If the existing test invokes via a package-private `loadConformance`/helper, reuse it; do not introduce a new invocation path.)
+(`Path`, `List`, `Files`, `assertThrows`, `assertTrue` are already imported in `LoadConformanceActivationTest`. This mirrors the existing `tamperedBytesFailClosed` test structure exactly, swapping the spec-byte tamper for a ledger-line tamper and the expected rule to `ledger-chain-broken`.)
 
 - [ ] **Step 2: Run test to verify it fails**
 
