@@ -31,12 +31,13 @@ Additive. A small authZ unit in `core.activation` (it governs the activation act
 ```
 gates activate Line1 recipe mix-recipe 1.1.0 \
       --by alice --approved-by bob --by-key alice.key --approved-by-key bob.key   [T5 signed]
-   └─ ActivationService.activate(req, signer, authorizer)                          [T3/T4/T5 checks first]
+   └─ policy = ActivationPolicyStore.load(reg)                                     [T6, absent ⇒ deny-all]
+   └─ ActivationService.activate(req, signer, policy)                             [T3/T4/T5 checks first]
         · four-eyes string SoD (alice≠bob)                 [T3]
         · signer preflight: key↔principal, crypto four-eyes [T5]
         · signer identity == named principals               [T5 followup]
-        └─ authorizer.authorize(alice, ACTIVATE, Line1,recipe,mix-recipe)  [T6] ── deny ─► REFUSE activation.authz.denied
-           authorizer.authorize(bob,   APPROVE,  Line1,recipe,mix-recipe)  [T6] ── deny ─► REFUSE (ledger untouched)
+        └─ authorizer.authorize(policy, alice, ACTIVATE, Line1,recipe,mix-recipe)  [T6] ─ deny ─► REFUSE activation.authz.denied
+           authorizer.authorize(policy, bob,  APPROVE,  Line1,recipe,mix-recipe)  [T6] ─ deny ─► REFUSE (ledger untouched)
         └─ both allow ─► build event ─► ActivationLedger.append(e, signer)  [T5 signed line + head]
 
 gates identity authorize <reg> alice activate Line1 recipe mix-recipe    [T6 audit plane]
@@ -76,19 +77,22 @@ Mirrors `CommandAuthorizer` — first-match, deny-by-default, pure (no I/O).
 - `AuthzDecision(boolean allowed, String ruleId, String reason)` with `allow(id)` / `deny(reason)` factories (mirrors `acl.Decision`; a parallel type, since `acl.Decision` lives in the command domain).
 
 ### 4.6 `core.activation.ActivationService` — authZ injection
-`activate(ActivationRequest r, LedgerSigner signer, ActivationAuthorizer/Policy authz)`. The T3/T4/T5 checks run **first and unchanged**; the authZ check runs after signer preflight and identity-binding, **before** the ledger write:
-- `activator ⊨ ACTIVATE (target,kind,ref)` and `approver ⊨ APPROVE (target,kind,ref)`, else refuse `activation.authz.denied` (with the denied principal/action + reason), ledger untouched.
-- **Composition:** authZ is applied only on the signed path (a non-null signer). A null signer (legacy/unsigned) skips authZ — authZ over an unauthenticated principal is not enforced (§7). The existing `activate(r)` / `activate(r, signer)` overloads are preserved (delegate with a null/deny-all authz that is a no-op on the unsigned path).
+The **canonical signed signature is `activate(ActivationRequest r, LedgerSigner signer, ActivationPolicy policy)`** (the service constructs one stateless `ActivationAuthorizer` and evaluates `policy`). The T3/T4/T5 checks run **first and unchanged**; the authZ check runs after signer preflight and identity-binding, **before** the ledger write:
+- `authorize(policy, r.by(), ACTIVATE, target,kind,ref)` and `authorize(policy, r.approvedBy(), APPROVE, target,kind,ref)`; either deny ⇒ refuse `activation.authz.denied` (with the denied principal/action + reason), ledger untouched.
+- **Overload discipline (explicit, to avoid a fail-open bypass):**
+  - `activate(ActivationRequest r)` — the **unsigned/legacy T3 path**, unchanged: no signer, **no authZ** (authZ presupposes authN; §7). Delegates to the signed method with `signer=null`, and when `signer==null` the authZ block is skipped entirely.
+  - The prior 2-arg `activate(r, signer)` (T5) is **removed** in favor of the 3-arg method — there is deliberately **no signed overload that skips authZ**, so a signed entry can never be written without an authZ decision. Every current signed caller migrates: the gate passes the loaded policy (§6); the existing T5 signed unit tests (`ActivationServiceSignedTest`, `ActivationLedgerSignedTest`) migrate to pass an explicit allow-all (or rule-specific) test policy — see §8.
+- **Composition:** authZ is enforced exactly when a signer is present (the signed path). On the null-signer path there is no authenticated subject and thus no authZ — and such an entry cannot bind at a `REQUIRE_SIGNED_ACTIVATION` edge (§5), so gate-time authZ is not a hole: skipping authZ requires going unsigned, and unsigned can't reach a require-signed edge.
 
 ## 5. Heimdall edge enforcement
-In `NcmdOpcUaBridgeMain`, the `REQUIRE_SIGNED_ACTIVATION` bind path (after `SignedLedgerVerifier` passes) gains an authZ re-check over the **current** `ActivationPolicyStore.load(ledgerDir)`:
-- `authorize(active.activatedBy(), ACTIVATE, target, "recipe", ref)` and `authorize(active.approvedBy(), APPROVE, …)`; a deny throws `activation.edge.authz-denied: <principal> <action> <reason>` — fail-closed, no bind.
-- Only runs when `REQUIRE_SIGNED_ACTIVATION` is on (authZ presupposes authN). Default-off ⇒ no authZ, exactly as the T3/T4/T5 no-regression gates expect (no change to those gates).
-- The `[BRIDGE] activation trust = signed` audit line is extended to note authZ was enforced (e.g. `signed+authz`).
+The authZ re-check runs in `loadConformance` **after** the active event is resolved (`ledger.active(target,"recipe",ref)`), NOT inside `assertLedgerTrustworthy` (which has only `ledgerDir/target/requireSigned` and runs before `active` is resolved). It is gated on `config.requireSignedActivation()` — so it only runs once `SignedLedgerVerifier` has already passed (authZ presupposes authN):
+- `policy = ActivationPolicyStore.load(ledgerDir)` (the **current** policy — revocation-fresh); `authorize(policy, active.activatedBy(), ACTIVATE, target, "recipe", ref)` and `authorize(policy, active.approvedBy(), APPROVE, …)`; a deny throws `activation.edge.authz-denied: <principal> <action> <reason>` — fail-closed, no bind.
+- **Audit line:** emit an `[BRIDGE] activation authz = ok (by <activatedBy>/<approvedBy>)` line **after** the authZ check passes (do NOT retro-label the earlier `activation trust = signed` line, which prints before authZ runs — that would over-claim).
+- **No-regression precision:** with `REQUIRE_SIGNED_ACTIVATION` **off**, no edge authZ runs — so the T3/T4 gates (`run-activation-gate.sh`, `run-lineage-gate.sh`, which use *unsigned* activation + require-signed off) are genuinely unchanged. **The T5 `run-identity-gate.sh` IS affected** and must be updated (§8): its *gate-time* signed activations now hit deny-by-default authZ (which fires on any signed activation, independent of the edge flag), so it must seed an `activation-policy.json`; and its I7 edge case (require-signed on) now additionally exercises edge authZ. This is a required change to that gate, not a no-op.
 
 ## 6. Gate CLI (`gates` / `IdentityGate`)
 - `identity authorize <reg> <principal> <activate|approve> <target> <kind> <ref>` — audit-plane check over `ActivationPolicyStore`; exit `0` allow (prints `ruleId`) / `1` deny (prints reason) / `2` usage. Placed under `identity` (the identity/authz plane), leaving `activation verify-chain` (T4) and `identity verify-signed` (T5) untouched.
-- `activate` needs **no new flag**: when `registry/identity/activation-policy.json` exists and the activation is signed, authZ is enforced automatically (deny-by-default). (An absent policy file denies all signed activations — so introducing T6 to an existing registry requires authoring the policy; this is the fail-closed default and is called out in the gate script + §7.)
+- `activate` needs **no new flag**: **every signed activation is authZ-checked** (the gate loads `ActivationPolicyStore.load(reg)` and passes it to the 3-arg `activate`). An **absent** `registry/identity/activation-policy.json` loads as deny-all, so it **denies every signed activation** — introducing T6 to an existing registry requires authoring the policy first. This is the fail-closed default, called out in the gate script (§8) and §7. (Unsigned `activate(r)` is unaffected — no authN, no authZ.)
 
 ## 7. Honest limitations (do not oversell)
 - **Direct principal grants only — no roles/hierarchy.** Every principal is named explicitly in a rule; many principals ⇒ many rules. RBAC (roles) and ABAC (attributes) are future threads. (The OPA-in-wasm path exists for *command* authz; activation authZ stays rule-based to keep the thesis tight.)
@@ -98,5 +102,33 @@ In `NcmdOpcUaBridgeMain`, the `REQUIRE_SIGNED_ACTIVATION` bind path (after `Sign
 - **Deny-by-default onboarding cost.** An absent/empty policy denies every signed activation. Adopting T6 requires authoring the policy first — intentional (fail-closed), but a real operational step.
 - **Scope is the activation act.** Other governed acts (schema/spec/template/provenance) are not authorized by T6 (§2).
 
-## 8. Why this matters (portfolio framing)
+## 8. Testing
+
+### 8.1 Gate — `scripts/run-activation-authz-gate.sh` (controller-run)
+Model on `run-identity-gate.sh` (reuse its keygen + `authorized-keys.jsonl` staging + fixture staging + broker harness). Seed an `activation-policy.json` granting `alice→ACTIVATE` and `bob→APPROVE` on `(Line1, recipe, mix-recipe)`. Deterministic, fresh registry per destructive case.
+
+| Case | Scenario | Expect |
+|---|---|---|
+| AZ1 | signed activate by authorized alice(ACTIVATE)+bob(APPROVE) | admitted, exit 0 |
+| AZ2 | activator `carol` lacks an ACTIVATE rule (approver ok) | REFUSED `activation.authz.denied`, exit 1, ledger untouched |
+| AZ3 | approver `carol` lacks an APPROVE rule (activator ok) | REFUSED `activation.authz.denied`, exit 1 |
+| AZ4 | absent/empty policy file → deny-all | REFUSED `activation.authz.denied`, exit 1 |
+| AZ5 | `identity authorize` audit-plane CLI: allow case + deny case | exit 0 (prints ruleId) / exit 1 (prints reason) |
+| AZ6 | edge: AZ1 activation, then remove alice's ACTIVATE rule, restart Heimdall with `REQUIRE_SIGNED_ACTIVATION=on` | fail-closed `activation.edge.authz-denied`, never binds |
+| AZ7 | edge (positive): authorized signed ledger + policy, require-signed on | binds; `[BRIDGE] activation authz = ok` |
+
+### 8.2 JUnit (unit layer)
+- `ActivationPolicyTest` / `ActivationRuleTest` — wildcard (`null`/`*`) matching, action match.
+- `ActivationPolicyStoreTest` — load; absent file → deny-all; malformed / `default != "deny"` → coded `IllegalStateException`.
+- `ActivationAuthorizerTest` — first-match, deny-by-default, allow with ruleId; each `activation.authz.*` reason; ACTIVATE vs APPROVE isolation.
+- `ActivationServiceSignedTest` / `ActivationLedgerSignedTest` (**migrated**) — pass an explicit allow-all/rule-specific policy to the 3-arg `activate`; add: activator-denied → refuse + ledger untouched; approver-denied → refuse; deny-all policy → refuse; T3 unsigned `activate(r)` still writes with no authZ.
+- Heimdall `RequireSignedActivationTest` (extended) — edge authz-denied on a revoked principal; edge authz-ok on an authorized one.
+
+### 8.3 No-regression (controller-run, must stay green)
+- `run-activation-gate.sh` (A1–A5), `run-lineage-gate.sh` (LN1–LN4) — unsigned + require-signed off ⇒ **no authZ**, unchanged.
+- **`run-identity-gate.sh` (I1–I7) — REQUIRED UPDATE:** add the `activation-policy.json` seeding (alice→ACTIVATE, bob→APPROVE on Line1/recipe/mix-recipe) to `stage_reg` and the I7 registry so its legitimate signed activations pass the new gate-time authZ. Without this, I1/I2/I5/I6/I7 break (their signed activations would be denied by the absent-policy deny-all). I3/I4a–c refusals are unaffected (they fail before the authZ check).
+- `run-template-conformance-gate.sh`, `run-yggdrasil-full-loop-gate.sh` — no signed activation, unchanged.
+- Full `mvn install` green.
+
+## 9. Why this matters (portfolio framing)
 Completes the identity story of **Bifrost-as-IAM**: T5 established *authN* (who cryptographically signed an activation), T6 adds *authZ* (whether that authenticated principal is permitted to activate/approve this resource), deny-by-default, with maker-checker separation that mirrors the dual signature, enforced both pre-deploy and at the runtime edge. It reuses the codebase's existing policy-as-code idiom (`acl`) over a now-cryptographic subject, so the two authorization domains — runtime commands and design-time activations — read as one governance model. It stops honestly short of roles/attributes and policy-signing, naming each as the next thread rather than overselling a full IAM.
