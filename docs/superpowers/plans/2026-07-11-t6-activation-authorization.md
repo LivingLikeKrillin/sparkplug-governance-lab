@@ -658,7 +658,7 @@ Add to `ActivateGateSignedTest`:
     }
 ```
 
-> **Executor guidance:** the signed-activate happy/deny paths need a resolvable `MasterSpec` artifact whose exact layout is defined by `RecipeArtifactResolver`/`MasterSpecStore` (see `ActivateGateTest`). Rather than duplicate that brittle fixture, the authoritative coverage for gate-level authZ is `run-activation-authz-gate.sh` (Task 9, AZ1–AZ4). For this task, the REQUIRED code change (below) is small; if reusing `ActivateGateTest`'s fixture is clean, add the deny-all assertion above — otherwise delete this stub and rely on the gate script.
+> **Executor guidance:** the signed-activate happy/deny paths need a resolvable `MasterSpec` artifact whose exact layout is defined by `RecipeArtifactResolver`/`MasterSpecStore` (see `ActivateGateTest`). That fixture is heavy. **Default action: DELETE the `signed_activate_denied_by_absent_policy` stub entirely — do NOT commit an empty/comment-only @Test whose name implies coverage it lacks.** The authoritative gate-level authZ coverage is `run-activation-authz-gate.sh` (Task 9, AZ1–AZ4). For this task, the REQUIRED code change (below) is small; if reusing `ActivateGateTest`'s fixture is clean, add the deny-all assertion above — otherwise delete this stub and rely on the gate script.
 
 - [ ] **Step 2: Modify `ActivateGate.activate`** — load the policy and pass it on the signed path
 
@@ -767,7 +767,7 @@ private static int authorize(String[] a) throws Exception {
     return 1;
 }
 ```
-Update the `identity` usage string(s) to include `authorize`.
+Update the `identity` usage string to include `authorize` — this is `IdentityGate.usage()` (`identity <keygen|verify-signed>` -> `identity <keygen|verify-signed|authorize>`), the only usage string, easy to miss as it sits outside the diff snippet.
 
 - [ ] **Step 4: Run to verify it passes**
 
@@ -914,7 +914,7 @@ git commit -m "test(gate): run-identity-gate — seed activation-policy.json so 
 **Files:**
 - Create: `scripts/run-activation-authz-gate.sh`
 
-> **Model on `run-identity-gate.sh`** (reuse its scaffolding: `set -euo pipefail`, `WORK`, `fail()`, docker/python checks, `REG_WIN`/cygpath, keygen + `authorized-keys.jsonl` staging, fixture staging, `sactivate` helper, broker harness for AZ6/AZ7). Seed an `activation-policy.json` granting `alice→ACTIVATE`, `bob→APPROVE` on `(Line1,recipe,mix-recipe)` in the authorized registries; use a fresh registry per case.
+> **Model on `run-identity-gate.sh`** (reuse its scaffolding: `set -euo pipefail`, `WORK`, `fail()`, docker/python checks, `REG_WIN`/cygpath, keygen + `authorized-keys.jsonl` staging, fixture staging, `sactivate` helper, broker harness for AZ6/AZ7). **keygen + register `carol` too** (for AZ2/AZ3, so the denial is the authZ layer, not principal-mismatch). Seed an `activation-policy.json` granting `alice→ACTIVATE`, `bob→APPROVE` on `(Line1,recipe,mix-recipe)` in the authorized registries; use a fresh registry per case.
 
 - [ ] **Step 1: Write the script** covering:
 
@@ -923,11 +923,12 @@ git commit -m "test(gate): run-identity-gate — seed activation-policy.json so 
 | AZ1 | authorized alice(ACTIVATE)+bob(APPROVE), signed activate | exit 0, INTACT via `identity verify-signed` |
 | AZ2 | policy grants only bob→APPROVE; signed activate `--by carol --approved-by bob` (carol registered, keyed) | `[GATE] REFUSED` `activation.authz.denied`, exit 1, ledger empty |
 | AZ3 | policy grants only alice→ACTIVATE; signed activate `--by alice --approved-by carol` | `activation.authz.denied`, exit 1 |
-| AZ4 | no `activation-policy.json` (deny-all); authorized-keyed signed activate | `activation.authz.denied`, exit 1 |
+| AZ4 | **stage a registry WITHOUT `activation-policy.json`** (deny-all) — do NOT seed this one; authorized-keyed signed activate | `activation.authz.denied`, exit 1 |
 | AZ5 | `gates identity authorize` allow case (alice activate) exit 0 + deny case (alice approve) exit 1 | both codes |
 | AZ6 | broker: AZ1 activation, then rewrite policy removing alice's ACTIVATE, restart Heimdall `REQUIRE_SIGNED_ACTIVATION=on` | log has `activation.edge.authz-denied`, never `[BRIDGE] activation bound` |
 | AZ7 | broker: authorized policy + signed ledger, `REQUIRE_SIGNED_ACTIVATION=on` | binds; log has `[BRIDGE] activation authz = ok` |
 
+- **AZ6/AZ7 need a FULL conformance registry** (udt + conformance + spec + trust anchor + `activation-policy.json`), NOT the lean CLI registry of AZ1-AZ5 — copy `run-identity-gate.sh`'s I7 staging block (its `$I7REG` conformance-trio staging) verbatim as the template, then add `activation-policy.json`.
 - Gate AZ6/AZ7 on `command -v docker` (skip-if-absent, honest label `(AZ1-AZ5${AZ_BROKER_RAN:+ +AZ6-AZ7})`).
 - For AZ2/AZ3, keygen `carol` and register her (so preflight passes and the denial is specifically the authZ layer, not principal-mismatch).
 - Final line: `echo "[AUTHZ] GATE PASS (AZ1-AZ5${AZ_BROKER_RAN:+ +AZ6-AZ7})"`.
