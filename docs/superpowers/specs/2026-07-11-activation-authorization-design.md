@@ -46,9 +46,9 @@ gates identity authorize <reg> alice activate Line1 recipe mix-recipe    [T6 aud
 
 Heimdall (re)start, ACTIVATION_TARGET=Line1, REQUIRE_SIGNED_ACTIVATION=on   [T6 edge]
    └─ SignedLedgerVerifier.verify(Line1) intact?  ── broken ─► FAIL-CLOSED (T5)
-        └─ active(Line1,recipe,mix-recipe) event e
-             authorizer.authorize(e.activatedBy(), ACTIVATE, …)  ── deny ─► FAIL-CLOSED activation.edge.authz-denied
-             authorizer.authorize(e.approvedBy(),  APPROVE,  …)  ── deny ─► FAIL-CLOSED (no bind)
+        └─ active(Line1,recipe,mix-recipe) event e ; policy = ActivationPolicyStore.load(ledgerDir)
+             authorizer.authorize(policy, e.activatedBy(), ACTIVATE, …)  ── deny ─► FAIL-CLOSED activation.edge.authz-denied
+             authorizer.authorize(policy, e.approvedBy(),  APPROVE,  …)  ── deny ─► FAIL-CLOSED (no bind)
         └─ both allow ─► contentSha256 recheck (T3) ─► bind
 ```
 
