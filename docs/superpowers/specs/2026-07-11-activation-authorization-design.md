@@ -101,6 +101,7 @@ The authZ re-check runs in `loadConformance` **after** the active event is resol
 - **Revocation is bind/startup-fresh, not live.** The edge re-checks authZ at bind (startup). A version already bound in a *running* edge is not retroactively un-bound when a permission is revoked until the next restart — same freshness model as T5's key checks.
 - **Deny-by-default onboarding cost.** An absent/empty policy denies every signed activation. Adopting T6 requires authoring the policy first — intentional (fail-closed), but a real operational step.
 - **Scope is the activation act.** Other governed acts (schema/spec/template/provenance) are not authorized by T6 (§2).
+- **Rollback carries no distinct permission.** A `--rollback` is authorized as `ACTIVATE`/`APPROVE` like any activation (there is no separate `ROLLBACK` action) — defensible since a rollback re-activates a prior version, and gate and edge agree, but worth naming: a principal permitted to activate a resource is also permitted to roll it back.
 
 ## 8. Testing
 
