@@ -69,7 +69,7 @@ gates activate Line1 recipe mix-recipe 1.1.0 \
              write SignedHead{Line1, seq, entryHash, "bob", headSig}
                 → registry/identity/Line1.head
 
-gates activation verify-signed <registry> Line1                 [T5: audit plane]
+gates identity verify-signed <registry> Line1                   [T5: audit plane]
    └─ SignedLedgerVerifier.verify(Line1)
         1. LedgerChain.verify(history)                 [T4 structural — reused verbatim]
         2. per entry: both sigs valid vs AuthorizedKeys, keys distinct
@@ -117,7 +117,7 @@ Interface: `Signatures sign(String entryHash)` returning `record Signatures(Stri
 - **Cryptographic four-eyes = `AuthorizedKeys.forPrincipal(activatedBy) ≠ AuthorizedKeys.forPrincipal(approvedBy)`** (throws `identity.four-eyes.same-key` → fail-closed at activate). With the `AuthorizedKeys.load` dup-principal-diff-key rule (§4.2) two *distinct* principals normally have distinct keys, so this fires only in the pathological case where two principals registered the *same* pubkey. The everyday "same key file for both" attack is caught earlier by `identity.key.principal-mismatch` (the approver key file won't verify against the approver principal's registered key). Both are activate-time refusals — see test I4.
 - `ActivationLedger.append(ActivationEvent e, LedgerSigner signer)`: when `signer == null` → **exact T4 behavior** (write unsigned `LedgerEntry`, no head). When non-null → compute entryHash, `signer.sign(entryHash)`, write the signed line, then advance + write the signed head. (The principal-binding and four-eyes checks already ran at signer construction / activate time, before any write.)
 - T4's `append(ActivationEvent)` remains as `append(e, null)` for source compatibility.
-- **Ordering / crash-consistency:** ledger line is appended *before* the head is written. If the process dies between the two, the head lags the tail by one entry — detected by `verify-signed` as `seq` mismatch (fail-closed), never a silent pass. §7 documents this as a recovery-by-re-sign path, not data loss.
+- **Ordering / crash-consistency:** ledger line is appended *before* the head is written. If the process dies between the two, the head lags the tail by one entry — detected by `verify-signed` fail-closed (the verifier checks `tail-mismatch` *before* `seq-mismatch`, so the reported code is `identity.head.tail-mismatch`; both are head faults, both fail closed), never a silent pass. §7 documents this as a recovery-by-re-sign path, not data loss.
 
 ### 4.6 `core.activation.ActivationService` — signer injection
 `activate(ActivationRequest, LedgerSigner)`. All T3 checks unchanged and run **before** any signing. `LedgerSigner` is built by the caller (gate) from the two key files + `AuthorizedKeys`. `null` signer → unsigned activation (preserves every existing T3/T4 test and the legacy CLI form).
@@ -137,10 +137,10 @@ Returns a **parallel `SignedVerdict`** record (`intact/brokenIndex/rule`) rather
 ## 6. Gate CLI (`gates` / `ActivateGate` / `GatesCli`)
 - `identity keygen <principal> --out <dir>` — generate an Ed25519 keypair; write `<principal>.key` (PKCS8 b64, `0600`-intent) and `<principal>.pub` (X.509 b64); print the `authorized-keys.jsonl` line to stdout. Exit 0 / 2 usage.
 - `activate ... --by-key <path> --approved-by-key <path>` — extends the existing `activate` leg. When both key flags present → build a `LedgerSigner` from `(--by principal, --by-key file, --approved-by principal, --approved-by-key file, AuthorizedKeys.load(reg))`; the signer's constructor runs the key-file↔principal binding check and the four-eyes check (§4.5), both fail-closed at activate before any write → dual-signed activation + head write. When absent → T4 unsigned activation (unchanged). If only one key flag present → usage error (2).
-- `activation verify-signed <reg> <target>` — `SignedLedgerVerifier`; exit 0 intact / 1 broken (prints index + reason) / 2 usage|no-such-target. **`activation verify-chain` is unchanged** (T4 structural-only).
+- `identity verify-signed <reg> <target>` — `SignedLedgerVerifier`; exit 0 intact / 1 broken (prints index + reason) / 2 usage|no-such-target. Placed under the **`identity`** subcommand (alongside `keygen`) specifically so **T4's `activation verify-chain` is left completely untouched** (structural-only). The two verifications are distinct legs on distinct subcommands.
 
 ## 7. Honest engineering notes (in the spec, not hidden)
-- **append writes line then head (non-atomic).** A crash between them leaves `head.seq` one behind the tail — `verify-signed` fails closed on `seq-mismatch`; recovery is re-signing the head for the current tail (a `gates identity reseal-head` convenience leg MAY be added; not required for the thesis). No silent acceptance, no data loss (the ledger line is the record; the head is a re-derivable anchor).
+- **append writes line then head (non-atomic).** A crash between them leaves the head one entry behind the tail — `verify-signed` fails closed (reported as `identity.head.tail-mismatch`, since the verifier compares tail hash before seq); recovery is re-signing the head for the current tail (a `gates identity reseal-head` convenience leg MAY be added; not required for the thesis). No silent acceptance, no data loss (the ledger line is the record; the head is a re-derivable anchor).
 - **`AuthorizedKeys.load` reads the whole file per verify** (small registry, matches T4's whole-file reads). Not cached across calls; O(n) is fine at this scale.
 - **Head signed by the approver** (the accountable party for "this is the current tail"). Signing it by the activator instead would be equally valid; approver chosen to match "approval attests the state."
 - **Key files are plaintext on disk** in the demo; `keygen` writes with restrictive-permission *intent* but real key custody (HSM, OS keystore) is out of scope (§9).
