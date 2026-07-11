@@ -1,68 +1,52 @@
-<svg viewBox="0 0 1100 344" width="1100" height="344" xmlns="http://www.w3.org/2000/svg" role="img" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif">
-  <title>Governance lifecycle — the gate opens the loop, drift closes it</title>
+<svg viewBox="0 0 1140 360" width="1140" height="360" xmlns="http://www.w3.org/2000/svg" role="img" font-family="Malgun Gothic,Apple SD Gothic Neo,Noto Sans KR,Segoe UI,-apple-system,Helvetica,Arial,sans-serif">
+  <title>거버넌스 라이프사이클 — 외부 Bifrost 통치를 소비해 엣지가 집행하고 관측이 되먹여 루프를 닫는다 (PoC에서 실제로 도는 루프)</title>
   <defs>
     <marker id="ag" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#57606a"/></marker>
     <marker id="ab" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#0969da"/></marker>
+    <marker id="aa" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#9a6700"/></marker>
   </defs>
 
-  <rect x="8" y="8" width="1084" height="328" rx="14" fill="#ffffff" stroke="#d0d7de"/>
+  <rect x="8" y="8" width="1124" height="344" rx="14" fill="#ffffff" stroke="#d0d7de"/>
 
-  <!-- title -->
-  <text x="32" y="40" font-size="16" font-weight="600" fill="#1f2328">Governance lifecycle — the gate opens the loop, drift closes it</text>
-  <text x="32" y="60" font-size="12" fill="#57606a">pre-deploy gate admits definitions · runtime drift feeds back — the loop closes</text>
+  <text x="32" y="44" font-size="19" font-weight="700" fill="#1f2328">거버넌스 라이프사이클 — 통치가 열고, 관측이 닫는다</text>
+  <text x="33" y="68" font-size="12" fill="#57606a">PoC에서 실제로 도는 루프 · 외부 Bifrost 통치를 소비해 엣지가 집행하고, 관측이 다음 통치로 되먹인다</text>
 
-  <!-- ===== edges ===== -->
+  <!-- edges -->
   <g fill="none" stroke-width="1.6">
-    <!-- GATE -> REG : governance blue -->
-    <polyline points="234,180 320,184" stroke="#0969da" marker-end="url(#ab)"/>
-    <!-- REG -> EDGE : data grey -->
-    <polyline points="470,184 580,180" stroke="#57606a" marker-end="url(#ag)"/>
-    <!-- EDGE -> DRIFT : observation dashed grey -->
-    <polyline points="760,180 850,180" stroke="#57606a" stroke-dasharray="5 3" marker-end="url(#ag)"/>
-    <!-- REG -> DRIFT : shortcut over the row, data grey -->
-    <polyline points="395,146 395,104 950,104 950,152" stroke="#57606a" marker-end="url(#ag)"/>
-    <!-- DRIFT -> GATE : feedback, dashed grey, routed under the row (closes the loop) -->
-    <polyline points="950,208 950,300 139,300 139,208" stroke="#57606a" stroke-dasharray="5 3" marker-end="url(#ag)"/>
+    <polyline points="262,192 316,192" stroke="#0969da" marker-end="url(#ab)"/>
+    <polyline points="540,192 594,192" stroke="#9a6700" marker-end="url(#aa)"/>
+    <polyline points="804,192 858,192" stroke="#57606a" marker-end="url(#ag)"/>
+    <polyline points="965,234 965,300 155,300 155,234" stroke="#57606a" stroke-dasharray="5 3" marker-end="url(#ag)"/>
   </g>
 
-  <!-- ===== edge labels (no chips; each beside its line in clear space) ===== -->
+  <!-- edge labels (no chips) -->
   <g font-size="11">
-    <text x="240" y="170" fill="#0969da">admit / reject</text>
-    <text x="240" y="200" fill="#8b95a1" font-size="10">breaking change</text>
-    <text x="497" y="170" fill="#57606a">definitions</text>
-    <text x="762" y="170" fill="#57606a">observed NBIRTH</text>
-    <text x="655" y="96" fill="#57606a">source of truth</text>
-    <text x="404" y="292" fill="#57606a">drift signal — closes the loop</text>
+    <text x="232" y="140" fill="#0969da">정책·활성버전 소비</text>
+    <text x="502" y="140" fill="#9a6700">통치된 쓰기 (APPLY)</text>
+    <text x="772" y="140" fill="#57606a">NDATA 관측</text>
+    <text x="392" y="294" fill="#57606a">관측 → 다음 통치 · 루프가 닫힌다 (verify-then-trust)</text>
   </g>
 
-  <!-- ===== nodes ===== -->
-  <!-- GATE (accent) -->
-  <rect x="44" y="152" width="190" height="56" rx="6" fill="#ddf4ff" stroke="#0969da"/>
-  <g text-anchor="middle">
-    <text x="139" y="178" font-size="12.5" font-weight="600" fill="#1f2328">SchemaGate</text>
-    <text x="139" y="196" font-size="11" fill="#57606a">pre-deploy, fail-closed</text>
-  </g>
+  <!-- nodes -->
+  <g font-size="12.5" text-anchor="middle" fill="#1f2328">
+    <rect x="48" y="150" width="214" height="84" rx="6" fill="#ddf4ff" stroke="#0969da"/>
+    <text x="155" y="182" font-weight="600">Bifrost · 통치 (외부)</text>
+    <text x="155" y="202" font-size="11" fill="#57606a">admit · activate</text>
+    <text x="155" y="220" font-size="11" fill="#57606a">registry · policy</text>
 
-  <!-- REG (accent cylinder) -->
-  <path d="M320,146 a75,9 0 0 1 150,0 l0,76 a75,9 0 0 1 -150,0 Z" fill="#ddf4ff" stroke="#0969da"/>
-  <path d="M320,146 a75,9 0 0 0 150,0" fill="none" stroke="#0969da"/>
-  <g text-anchor="middle">
-    <text x="395" y="174" font-size="12.5" font-weight="600" fill="#1f2328">UDT registry</text>
-    <text x="395" y="192" font-size="11" fill="#57606a">SemVer</text>
-    <text x="395" y="208" font-size="11" fill="#57606a">source of truth</text>
-  </g>
+    <rect x="316" y="150" width="224" height="84" rx="6" fill="#eaf3ea" stroke="#1a7f37"/>
+    <text x="428" y="182" font-weight="700">Heimdall 엣지 · 집행</text>
+    <text x="428" y="202" font-size="11" fill="#57606a">재인가 · 활성버전 바인딩</text>
+    <text x="428" y="220" font-size="11" fill="#57606a">fail-closed</text>
 
-  <!-- EDGE (default) -->
-  <rect x="580" y="152" width="180" height="56" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
-  <g text-anchor="middle">
-    <text x="670" y="176" font-size="12.5" fill="#1f2328">Edge Node / UNS</text>
-    <text x="670" y="194" font-size="11" fill="#57606a">NBIRTH / NDATA</text>
-  </g>
+    <rect x="594" y="150" width="210" height="84" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+    <text x="699" y="182" font-weight="600">현장 런타임</text>
+    <text x="699" y="202" font-size="11" fill="#57606a">OPC-UA 쓰기</text>
+    <text x="699" y="220" font-size="11" fill="#57606a">Sparkplug NDATA</text>
 
-  <!-- DRIFT (default) -->
-  <rect x="850" y="152" width="200" height="56" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
-  <g text-anchor="middle">
-    <text x="950" y="176" font-size="12.5" fill="#1f2328">DriftMonitor</text>
-    <text x="950" y="194" font-size="11" fill="#57606a">runtime, detect-only</text>
+    <rect x="858" y="150" width="214" height="84" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+    <text x="965" y="182" font-weight="600">관측 · UNS</text>
+    <text x="965" y="202" font-size="11" fill="#57606a">Muninn → UNS</text>
+    <text x="965" y="220" font-size="11" fill="#57606a">drift 감지</text>
   </g>
 </svg>
