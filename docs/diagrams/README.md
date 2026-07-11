@@ -7,11 +7,11 @@ Style: "Light / GitHub-native". Spec: `../superpowers/specs/2026-06-17-portfolio
 
 | File | Source | Generated? | Shown in |
 |------|--------|-----------|----------|
-| `svg/governance-lifecycle.svg` | `src/governance-lifecycle.mmd` | mermaid-cli | hero; README "The one-line idea" |
+| `svg/governance-lifecycle.svg` | itself (hand-authored) | no | hero; README "The one-line idea" |
 | `svg/system-architecture.svg` | itself (hand-authored) | no | README "Architecture" |
-| `svg/seq-schema-data-separation.svg` | `src/seq-schema-data-separation.mmd` | mermaid-cli | ADR-0008 |
-| `svg/seq-ncmd-authorization.svg` | `src/seq-ncmd-authorization.mmd` | mermaid-cli | ADR-0011 |
-| `svg/ot-it-dataflow.svg` | `src/ot-it-dataflow.mmd` | mermaid-cli | README "OT→IT data flow" |
+| `svg/seq-schema-data-separation.svg` | itself (hand-authored) | no | ADR-0008 |
+| `svg/seq-ncmd-authorization.svg` | itself (hand-authored) | no | ADR-0011 |
+| `svg/ot-it-dataflow.svg` | itself (hand-authored) | no | README "OT→IT data flow" |
 | `svg/nbirth-size.svg` | itself (hand-authored) | no | blog/slides |
 | `svg/loss-ledger.svg` | itself (hand-authored) | no | blog/slides |
 
