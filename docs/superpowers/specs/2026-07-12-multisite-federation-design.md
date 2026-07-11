@@ -129,7 +129,8 @@ Additive; most of this is **wiring existing pieces**, not new code.
   reused verbatim.
 - **Enterprise layer (new setup, ~no new core code):**
   - the **central governed registry** = a git repo (templates + policy) — the authority.
-  - the **enterprise anchor** = a git AnchorStore repo the sites append to but cannot rewrite.
+  - the **enterprise anchor** = a git AnchorStore repo the sites append to but (topologically, per §3.3)
+    do not rewrite.
 - **Site A, Site B (each):** own **broker** (e.g. `:1883` / `:1884`), own **Heimdall**, own **git-mirror
   clone** of the enterprise registry, own **activation ledger** anchored to the **enterprise** anchor.
 - **Small new code (honestly enumerated — not zero):**
