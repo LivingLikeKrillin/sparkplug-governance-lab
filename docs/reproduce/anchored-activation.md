@@ -136,7 +136,7 @@ then runs `gates identity verify-anchored …` and asserts the exit code **and**
 | **AN6** | activate `1.0.0` then `1.1.0` (head seq1, anchor seq1) | `delete_line anchor 2` — anchor back to seq0 while the head stays seq1 (the **crash window**: head advanced before the anchor caught up) | `verify-anchored <reg> Line1` | exit 1, `identity.anchor.behind` |
 | **AN7** | one signed `activate 1.0.0` (anchor seq0 recorded) | `rm` the ledger **and** head, **keep** `<reg>/anchor/Line1.anchor.jsonl` | `verify-anchored <reg> Line1` | exit 1, `identity.anchor.rollback` — the witness attests a tail that is now entirely gone |
 
-### AN8 (skipped here)
+### AN8 (broker leg — verified full)
 When **not** skipped, AN8 stages a *full conformance* registry (UDT + recipe conformance + spec + policy
 + trust anchor), does the AN2-style truncation, then starts **HiveMQ CE** (`docker compose … up -d
 hivemq-ce`, waits for `:1883`), the **OPC-UA sim**, and **Heimdall** with
@@ -144,6 +144,14 @@ hivemq-ce`, waits for `:1883`), the **OPC-UA sim**, and **Heimdall** with
 `activation.edge.anchor-denied` and that it **never** prints `[BRIDGE] activation bound` or `[BRIDGE]
 ready` — i.e. the edge fail-closes before binding. With `SKIP_AN8=1` this whole branch is bypassed and
 the gate prints `AN8 skipped (SKIP_AN8 set)`.
+
+The full run (Docker up) was executed and captured:
+```
+[ANCHORED] AN8 => PASS (activation.edge.anchor-denied, edge NEVER bound)
+[ANCHORED] GATE PASS (AN1-AN7 +AN8)
+```
+So the reproduction is `SKIP_AN8=1` for a no-Docker CLI run, or the plain command (Docker up) for the
+full `AN1–AN8`.
 
 ---
 

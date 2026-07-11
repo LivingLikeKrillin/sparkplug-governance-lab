@@ -122,16 +122,16 @@ bash scripts/run-provenance-gate.sh    # ③ verify accept / tamper detected => 
 |---|---|:--:|---|---|---|
 | T3 activation | `run-activation-gate.sh` | 🐳 | four-eyes SoD + content seal + audited rollback + edge bind | A1–A5 | [log](outputs/run-activation-gate.log) |
 | T4 lineage | `run-lineage-gate.sh` | 🐳 | hash-chained ledger; edit/delete/reorder detectable; edge fail-closes | LN1–LN4 | [log](outputs/run-lineage-gate.log) |
-| T5 identity | `run-identity-gate.sh` | 🐳 | dual Ed25519 signatures + signed head; full-re-chain / tail-truncation caught | I1–I6 (`SKIP_I7=1` skips the broker leg) | [log](outputs/run-identity-gate.log) |
+| T5 identity | `run-identity-gate.sh` | 🐳 | dual Ed25519 signatures + signed head; full-re-chain / tail-truncation caught; edge fail-closes (I7) | **I1–I7** (`SKIP_I7=1` skips the optional broker leg; the full run is verified) | [log](outputs/run-identity-gate.log) |
 | T6 authZ | `run-activation-authz-gate.sh` | 🐳 | deny-by-default maker-checker; edge revocation bind-fresh | AZ1–AZ7 | [log](outputs/run-activation-authz-gate.log) |
-| T7 anchored | `run-anchored-activation-gate.sh` | 🐳 | four-eyes head + external anchor; lone-reanchor & co-rollback caught | AN1–AN7 (`SKIP_AN8=1` skips the broker leg) | [log](outputs/run-anchored-activation-gate.log) |
+| T7 anchored | `run-anchored-activation-gate.sh` | 🐳 | four-eyes head + external anchor; lone-reanchor & co-rollback caught; edge fail-closes (AN8) | **AN1–AN8** (`SKIP_AN8=1` skips the optional broker leg; the full run is verified) | [log](outputs/run-anchored-activation-gate.log) |
 
 ```bash
-SKIP_I7=1 SKIP_AN8=1 bash scripts/run-activation-gate.sh          # A1–A5   => PASS
-SKIP_I7=1            bash scripts/run-identity-gate.sh            # I1–I6   => PASS
-                    bash scripts/run-lineage-gate.sh            # LN1–LN4 => PASS
-                    bash scripts/run-activation-authz-gate.sh   # AZ1–AZ7 => PASS
-           SKIP_AN8=1 bash scripts/run-anchored-activation-gate.sh # AN1–AN7 => PASS
+bash scripts/run-activation-gate.sh            # A1–A5   => PASS
+bash scripts/run-identity-gate.sh              # I1–I7   => PASS   (SKIP_I7=1 skips the optional broker leg)
+bash scripts/run-lineage-gate.sh               # LN1–LN4 => PASS
+bash scripts/run-activation-authz-gate.sh      # AZ1–AZ7 => PASS
+bash scripts/run-anchored-activation-gate.sh   # AN1–AN8 => PASS   (SKIP_AN8=1 skips the optional broker leg)
 ```
 
 ## The spine
@@ -196,9 +196,9 @@ mvn test -Dtest=LossLedgerTest,UaDataTypeMapperTest      # BUILD SUCCESS
 | 8 | composable conformance | 🐳 | ✅ PASS |
 | 9 | activation T3 | 🐳 | ✅ PASS (A1–A5) |
 | 10 | lineage T4 | 🐳 | ✅ PASS (LN1–LN4) |
-| 11 | identity T5 | 🐳 | ✅ PASS (I1–I6) |
+| 11 | identity T5 | 🐳 | ✅ PASS (I1–I7, incl. broker leg) |
 | 12 | activation-authz T6 | 🐳 | ✅ PASS (AZ1–AZ7) |
-| 13 | anchored T7 | 🐳 | ✅ PASS (AN1–AN7) |
+| 13 | anchored T7 | 🐳 | ✅ PASS (AN1–AN8, incl. broker leg) |
 | 14 | spine | 🐳 | ✅ PASS |
 | — | measurements (loss / nbirth) |  | ✅ mechanism test-verified; figures = ADR examples |
 

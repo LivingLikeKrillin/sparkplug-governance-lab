@@ -17,6 +17,10 @@
 [ANCHORED] ===== AN7: rollback-to-empty (delete ledger+head, keep anchor) -> identity.anchor.rollback =====
 [ANCHORED] AN7 => PASS (witness attests a tail now gone: identity.anchor.rollback, exit 1)
 [ANCHORED] ===== AN8: edge fail-closed on a rolled-back ledger (REQUIRE_ANCHORED_ACTIVATION=on) =====
-[ANCHORED] AN8 skipped (SKIP_AN8 set)
+[ANCHORED] AN8: build heimdall + sim jars
+[ANCHORED] AN8: start HiveMQ CE + wait for :1883
+[ANCHORED] AN8: start the OPC-UA sim
+[ANCHORED] AN8: start Heimdall with REQUIRE_ANCHORED_ACTIVATION=on against the rolled-back ledger
+[ANCHORED] AN8 => PASS (activation.edge.anchor-denied, edge NEVER bound)
 
-[ANCHORED] GATE PASS (AN1-AN7)
+[ANCHORED] GATE PASS (AN1-AN7 +AN8)

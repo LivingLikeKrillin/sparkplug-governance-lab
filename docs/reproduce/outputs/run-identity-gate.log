@@ -17,6 +17,10 @@
 [IDENTITY] ===== I6: full structural re-chain without re-signing -> identity.sig.invalid =====
 [IDENTITY] I6 => PASS (structural chain re-validates but identity.sig.invalid)
 [IDENTITY] ===== I7: edge fail-closed on a broken SIGNED ledger (REQUIRE_SIGNED_ACTIVATION=on) =====
-[IDENTITY] I7 skipped (SKIP_I7 set)
+[IDENTITY] I7: build heimdall + sim jars
+[IDENTITY] I7: start HiveMQ CE + wait for :1883
+[IDENTITY] I7: start the OPC-UA sim
+[IDENTITY] I7: start Heimdall with REQUIRE_SIGNED_ACTIVATION=on against the broken signed ledger
+[IDENTITY] I7 => PASS (activation.edge.signed-ledger-broken, edge NEVER bound)
 
-[IDENTITY] GATE PASS (I1-I6)
+[IDENTITY] GATE PASS (I1-I6 +I7)
