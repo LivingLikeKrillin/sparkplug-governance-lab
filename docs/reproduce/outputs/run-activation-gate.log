@@ -1,0 +1,33 @@
+[GATE] step 0: build jars if missing (core, sim, gates, heimdall)
+[GATE] gates=C:/Users/Eisen/Desktop/Labs/[iiot]/bifrost/gates/target/bifrost-gates.jar
+[GATE] heimdall=C:/Users/Eisen/Desktop/Labs/[iiot]/bifrost/heimdall/target/bifrost-heimdall.jar
+[GATE] sim=C:/Users/Eisen/Desktop/Labs/[iiot]/bifrost/sim/target/bifrost-sim.jar
+[GATE] step 1: stage the governed registry (udt + recipe conformance + spec 1.0.0 + acl)
+[GATE] ===== A1: activate + audit (pure CLI, no broker) =====
+[GATE] activated target=Line1 kind=recipe ref=mix-recipe version=1.0.0 action=ACTIVATE by=alice approvedBy=bob sha256=9a9d76c37b911d8e3055fe0549dfb06478fbab0134053bbb2ccf55f31d6ceb98
+[GATE] A1 OK: mix-recipe@1.0.0 activated (alice/bob), active pointer + audit trail written
+[GATE] ===== A2: SoD refuse (self-approval + missing approver) =====
+[GATE] A2a: self-approval REFUSED (activation.approval.self)
+[GATE] A2 OK: four-eyes enforced — self-approval and missing approver both refused
+[GATE] ===== A3a: activate-time refuse — unresolvable artifact, ledger untouched =====
+[GATE] A3a OK: unresolvable version refused (fail-closed), ledger unchanged (events=1)
+[GATE] step 2: start HiveMQ CE (broker) + wait for :1883
+[GATE] HiveMQ CE up on :1883
+[GATE] step 3: start the OPC-UA sim
+[GATE] OPC-UA sim listening (pid 50109)
+[GATE] ===== A3b: edge provenance — tamper the active spec, edge refuses to bind =====
+[GATE] A3b OK: tampered spec bytes rejected by the edge (content-mismatch, no [BRIDGE] ready)
+[GATE] ===== A4: runtime flip — activate 1.1.0 moves the edge's admissible setpoint =====
+[GATE] A4a: edge bound mix-recipe@1.0.0 (ledger-driven)
+[GATE] A4b: Rpm=1500 APPLYed (matches active recipe 1.0.0)
+[GATE] A4c: Rpm=1600 DENIED (conformance.recipe.deviation vs 1.0.0)
+[GATE] activated target=Line1 kind=recipe ref=mix-recipe version=1.1.0 action=ACTIVATE by=alice approvedBy=bob sha256=b06b79330bf4957990642e671059c00d1e1f8a7f0c3984bfef7107389437c20c
+[GATE] A4d: after activating 1.1.0, Rpm=1600 APPLYed (edge moved)
+[GATE] A4 OK: one governed activation flipped the edge's admissible setpoint 1500 -> 1600
+[GATE] ===== A5: rollback — return the edge to 1.0.0 via an audited ROLLBACK =====
+[GATE] activated target=Line1 kind=recipe ref=mix-recipe version=1.0.0 action=ROLLBACK by=alice approvedBy=bob sha256=9a9d76c37b911d8e3055fe0549dfb06478fbab0134053bbb2ccf55f31d6ceb98
+[GATE] A5a: audit trail intact — ACTIVATE@1.0.0, ACTIVATE@1.1.0, ROLLBACK@1.0.0 in order
+[GATE] A5 OK: audited rollback returned the edge to 1.0.0 (Rpm=1500 APPLYed again)
+[GATE] step 9: teardown
+
+[GATE] PASS run-activation-gate.sh

@@ -1,0 +1,22 @@
+[ANCHORED] step 0: build the identity-aware gates jar (core+gates)
+[ANCHORED] gates=C:/Users/Eisen/Desktop/Labs/[iiot]/bifrost/gates/target/bifrost-gates.jar
+[ANCHORED] step 1: keygen alice/bob + build the canonical authorized-keys.jsonl
+[ANCHORED] keys ready (alice activator, bob approver — both registered)
+[ANCHORED] ===== AN1: signed activate -> verify-anchored INTACT (file anchor) =====
+[ANCHORED] AN1 => PASS (INTACT (anchored), exit 0)
+[ANCHORED] ===== AN2: truncation re-anchor caught by append-only FILE anchor -> identity.anchor.rollback =====
+[ANCHORED] AN2 => PASS (identity.anchor.rollback, exit 1)
+[ANCHORED] ===== AN3: co-rollback caught by GIT witness (committed HEAD) -> identity.anchor.rollback =====
+[ANCHORED] AN3 => PASS (git witness catches the co-rollback, exit 1)
+[ANCHORED] ===== AN4: git witness survives a working-tree anchor tamper -> identity.anchor.rollback =====
+[ANCHORED] AN4 => PASS (committed HEAD ignores the tampered working tree, exit 1)
+[ANCHORED] ===== AN5: four-eyes head required -> identity.head.four-eyes.missing =====
+[ANCHORED] AN5 => PASS (identity.head.four-eyes.missing, exit 1)
+[ANCHORED] ===== AN6: anchor-behind (crash window: head advanced, anchor lagging) -> identity.anchor.behind =====
+[ANCHORED] AN6 => PASS (identity.anchor.behind, exit 1)
+[ANCHORED] ===== AN7: rollback-to-empty (delete ledger+head, keep anchor) -> identity.anchor.rollback =====
+[ANCHORED] AN7 => PASS (witness attests a tail now gone: identity.anchor.rollback, exit 1)
+[ANCHORED] ===== AN8: edge fail-closed on a rolled-back ledger (REQUIRE_ANCHORED_ACTIVATION=on) =====
+[ANCHORED] AN8 skipped (SKIP_AN8 set)
+
+[ANCHORED] GATE PASS (AN1-AN7)

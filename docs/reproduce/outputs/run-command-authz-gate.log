@@ -1,0 +1,6 @@
+[GATE] step 0: build jars if missing
+[GATE] step 1: accept — valid deny-by-default policy must PASS (exit 0)
+[ACL-GATE] FAIL ? ? violations:
+  - [lint-3] constraint without min/max: rule rpm
+  - [lint-3] constraint without min/max: rule temp
+[GATE] FAIL: good policy was rejected (exit 1) — expected accept

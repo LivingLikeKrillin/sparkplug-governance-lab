@@ -1,0 +1,55 @@
+[GATE] step 1: preflight + build (all four jars)
+[GATE] gates=C:/Users/Eisen/Desktop/Labs/[iiot]/bifrost/gates/target/bifrost-gates.jar
+[GATE] sim=C:/Users/Eisen/Desktop/Labs/[iiot]/bifrost/sim/target/bifrost-sim.jar
+[GATE] mimir=C:/Users/Eisen/Desktop/Labs/[iiot]/mimir/target/mimir.jar
+[GATE] muninn=C:/Users/Eisen/Desktop/Labs/[iiot]/muninn/target/muninn.jar
+[GATE] step 2: start HiveMQ CE (broker) + wait for :1883, then the OPC-UA sim
+[GATE] HiveMQ CE up on :1883
+[GATE] OPC-UA sim listening (pid 51282)
+[GATE] ===== HAPPY step 3: govern the MODEL (schema ① + provenance ③) =====
+SLF4J(W): No SLF4J providers were found.
+SLF4J(W): Defaulting to no-operation (NOP) logger implementation
+SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
+[MIMIR] derived Line1-Mixer@1.0.0 members=4 -> C:/Users/Eisen/Desktop/Labs/[iiot]/bifrost/build/gate/def.json
+[MIMIR]   Rpm : Double range=[0.0, 3000.0]
+[MIMIR]   Temp : Double range=[0.0, 450.0]
+[MIMIR]   Running : Boolean range=null
+[MIMIR]   Secret : Double range=null
+[GATE] new templateRef 'Line1-Mixer' 1.0.0 ? initial registration allowed ?
+[GATE] promoted to registry
+[GATE] schema ① admitted + promoted Line1-Mixer@1.0.0
+[PUBLISH] recipe Line1-Mixer/1.0.0 defRef=d52a157db62d7ee0d5cbdbf3d8a5f0c64fa99bc8 sha256=1fee6fbac8e4f55ec79e07d4a6a204fb8ac29a150f2998f2c4c573320a553217
+[GATE] provenance ③ minted recipe/Line1-Mixer/1.0.0/recipe-setpoints.yaml
+[GATE] ===== HAPPY step 4: govern the SPEC (conformance) + feed the UNS =====
+[GATE] ref=MixProductA equipment=Line1-Mixer@1.0.0 setpoints=2
+[GATE] PASS ?
+[GATE] conformance accepted the conformant master spec
+[GATE] (e) NBIRTH byte-identical to BOTH promoted udt JSON and published recipe
+[GATE] HAPPY OK: Rpm/Temp/Running/Secret reached NDATA, 0 drops
+[GATE] ===== (a) schema compat-break REJECT (Running omitted -> member.removed) =====
+SLF4J(W): No SLF4J providers were found.
+SLF4J(W): Defaulting to no-operation (NOP) logger implementation
+SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
+[MIMIR] derived Line1-Mixer@1.1.0 members=3 -> C:/Users/Eisen/Desktop/Labs/[iiot]/bifrost/build/gate/def-breaking.json
+[MIMIR]   Rpm : Double range=[0.0, 3000.0]
+[MIMIR]   Temp : Double range=[0.0, 450.0]
+[MIMIR]   Secret : Double range=null
+[GATE] ref=Line1-Mixer mode=FORWARD registered=1.0.0 proposed=1.1.0
+[GATE] FAIL ? ? violations:
+  - [member.removed] member 'Running' removed ? violates FORWARD (old consumers expect this field); new templateRef + major bump required
+[GATE] (a) OK: schema ① rejected member.removed (exit 1, NO --promote)
+[GATE] ===== (b) spec out-of-range REJECT (Rpm=9999 above max) =====
+[GATE] ref=MixProductA equipment=Line1-Mixer@1.0.0 setpoints=2
+[GATE] FAIL ? ? violations:
+  - [spec.range.above-max] member 'Rpm' value 9999.0 is above max 3000.0
+[GATE] (b) OK: conformance rejected spec.range.above-max (exit 1)
+[GATE] ===== (c) tampered published master-spec REJECT (provenance ③ verify) =====
+[PUBLISH] recipe MixProductA/1.0.0 defRef=bef0cdf29a4fd612620199c9fe26b8ae26cec444 sha256=7b6aede7980b0e27c81643f0dbb6d36964831dd6f5ea8208b82d32e03822230b
+[PROV-GATE] verify ref=MixProductA version=1.0.0 sha256=7b6aede7980b0e27c81643f0dbb6d36964831dd6f5ea8208b82d32e03822230b => OK
+[PROV-GATE] verify ref=MixProductA version=1.0.0 sha256=e24a30d906ac82d31fb843ed7e5624aa11517b39d7e682e34b8be6b61818f1b0 manifest=7b6aede7980b0e27c81643f0dbb6d36964831dd6f5ea8208b82d32e03822230b => MISMATCH (tampered or unresolvable)
+[GATE] (c) OK: provenance ③ verify accepted clean, rejected tampered master-spec (exit 1)
+[GATE] ===== (d) non-conformant NDATA DROPPED (--inject-bogus Secret) =====
+[GATE] (d) OK: Rpm/Temp/Running birthed, Secret dropped by egress-validate
+[GATE] step 9: teardown
+
+[GATE] PASS run-yggdrasil-spine-gate.sh

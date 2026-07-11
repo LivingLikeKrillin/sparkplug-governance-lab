@@ -1,0 +1,32 @@
+[GATE] step 1: preflight + build (5 jars)
+[GATE] step 2: start ONE HiveMQ CE broker + sim
+[GATE] HiveMQ CE up on :1883
+[GATE] OPC-UA sim listening (pid 48732)
+[GATE] step 3: govern the MODEL (schema ① + provenance ③) to populate the registry
+SLF4J(W): No SLF4J providers were found.
+SLF4J(W): Defaulting to no-operation (NOP) logger implementation
+SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
+[MIMIR] derived Line1-Mixer@1.0.0 members=4 -> C:/Users/Eisen/Desktop/Labs/[iiot]/bifrost/build/loopgate/def.json
+[MIMIR]   Rpm : Double range=[0.0, 3000.0]
+[MIMIR]   Temp : Double range=[0.0, 450.0]
+[MIMIR]   Running : Boolean range=null
+[MIMIR]   Secret : Double range=null
+[GATE] new templateRef 'Line1-Mixer' 1.0.0 ? initial registration allowed ?
+[GATE] promoted to registry
+[PUBLISH] recipe Line1-Mixer/1.0.0 defRef=87c85da4a8820a6a1567b518138635580f00e728 sha256=1fee6fbac8e4f55ec79e07d4a6a204fb8ac29a150f2998f2c4c573320a553217
+[GATE] registry populated (udt + recipe) for Line1-Mixer@1.0.0
+[GATE] step 4: start the Heimdall daemon (southbound write boundary)
+[GATE] Heimdall ready (pid 48783)
+[GATE] ===== L1 OBSERVE#1 (before): NDATA Rpm == 1535.0 =====
+[GATE] L1 OK: initial UNS observation Rpm=1535.0
+[GATE] ===== L2 COMMAND: authorized NCMD Recipe/Rpm=1500 -> APPLY + transfer =====
+[GATE] L2 OK: authorized command applied + transferred to the instance PV
+[GATE] ===== L3 OBSERVE#2 (after): NDATA Rpm == 1500.0 — THE CLOSED LOOP =====
+[GATE] L3 OK: the governed+authorized command changed the UNS observation 1535 -> 1500
+[GATE] ===== L4 rogue deny-by-default: Recipe/Secret -> DENY, never APPLY =====
+[GATE] L4 OK: rogue node denied, never applied
+[GATE] ===== L5 defense-in-depth: Recipe/Rpm=9999 -> DENY above-max, UNS unchanged =====
+[GATE] L5 OK: out-of-range command denied; UNS observation still Rpm=1500.0
+[GATE] step 9: teardown
+
+[GATE] PASS run-yggdrasil-full-loop-gate.sh
