@@ -140,23 +140,49 @@ bash scripts/run-anchored-activation-gate.sh   # AN1–AN8 => PASS   (SKIP_AN8=1
 |---|:--:|---|---|
 | `run-yggdrasil-spine-gate.sh` | 🐳 | Mímir → Bifrost → Muninn northbound spine, **zero shared code** (composed only over the wire contract) | [log](outputs/run-yggdrasil-spine-gate.log) |
 
-## Measurements (mechanism test-verified; figures are ADR worked examples)
+## Measurements — reproduced live (the demos print the exact figures)
 
-The loss and payload figures the blog cites are **worked examples** in the ADRs; the underlying
-**mechanism** is verified by unit tests (run in this lab, not bifrost):
+Both figures the blog cites are produced by **running the lab's own demos** — each prints the exact
+number captured below (not just asserted). They need the lab's runtime: `mvn` + a Docker broker on
+`:1883`; the loss demo additionally needs the Python OPC-UA sim (`pip install asyncua`).
+
+**Loss ledger — 8 clean / 1 side-channel / 0 type-identity** (`svg/loss-ledger.svg`, ADR-0010), on the
+live 9-member `MotorType`:
 
 ```bash
 cd sparkplug-governance-lab
-mvn test -Dtest=LossLedgerTest,UaDataTypeMapperTest      # BUILD SUCCESS
+docker compose up -d hivemq-ce               # MQTT broker on :1883
+python opcua-sim-server.py &                 # OPC-UA sim on :4840  (pip install asyncua)
+mvn -q exec:java -Dexec.mainClass=dev.krillin.sparkplug.OpcUaUdtBridgeDemo
 ```
 
-- **loss ledger** (`svg/loss-ledger.svg`, ADR-0010): the 9-member example = **8 clean / 1 side-channel
-  preserved / 0 type-identity lost**. `LossLedgerTest` verifies the `CLEAN / PRECISION_LOSS /
-  TYPE_IDENTITY_LOSS / SIDE_CHANNEL_REQUIRED` classification and the side-channel preservation
-  (`ua_ticks` / `ua_statuscode`). Evidence: [`outputs/lab-measurements.log`](outputs/lab-measurements.log).
-- **NBIRTH payload** (`svg/nbirth-size.svg`, ADR-0008): schema/data separation = **328 B inline vs
-  162 B thin (schemaRef), ~166 B / birth saved**. `UaDataTypeMapperTest` verifies the type mapping and
-  loss-class the thin representation relies on.
+Prints (evidence: [`outputs/demo-opcua-udt.log`](outputs/demo-opcua-udt.log)):
+
+```
+[MAP] UdtDefinition MotorType@1.0.0  members=9
+[LEDGER] 9 members: 8 clean / 1 side-channel preserved / 0 type-identity lost
+    alias#5  LastMaintenance  DATETIME  -> DateTime   [PRECISION_LOSS]  side-channel=UA_TICKS
+```
+
+The single side-channel is the `DateTime` member: OPC-UA's 100 ns/1601 ticks are preserved verbatim in
+`ua_ticks` (Sparkplug ms/1970 would lose the epoch + sub-ms fidelity). The other 8 members map CLEAN.
+
+**NBIRTH payload — 328 B fat vs 162 B thin, 166 B saved/rebirth** (`svg/nbirth-size.svg`, ADR-0008),
+schema paid once as a retained Definition:
+
+```bash
+docker compose up -d hivemq-ce
+mvn -q exec:java -Dexec.mainClass=dev.krillin.sparkplug.Spb40Demo     # unit check: mvn test -Dtest=Spb40SizeTest
+```
+
+Prints (evidence: [`outputs/demo-spb40.log`](outputs/demo-spb40.log)):
+
+```
+>>> [#608 size] 3.0-style fat NBIRTH (inline _types_)=328B  vs  thin NBIRTH (schemaRef)=162B  -> 166B saved per rebirth (schema paid once as retained Definition 192B).
+```
+
+The metrics are `{Rpm=1500.0, Running=true, Temperature=65.4}`; `Spb40SizeTest` additionally asserts
+`thin.length < fat.length`.
 
 ---
 
@@ -200,7 +226,8 @@ mvn test -Dtest=LossLedgerTest,UaDataTypeMapperTest      # BUILD SUCCESS
 | 12 | activation-authz T6 | 🐳 | ✅ PASS (AZ1–AZ7) |
 | 13 | anchored T7 | 🐳 | ✅ PASS (AN1–AN8, incl. broker leg) |
 | 14 | spine | 🐳 | ✅ PASS |
-| — | measurements (loss / nbirth) |  | ✅ mechanism test-verified; figures = ADR examples |
+| 15 | measurement: loss ledger (OpcUaUdtBridgeDemo) | 🐳 | ✅ reproduced live — `8 clean / 1 side-channel / 0 type-identity` |
+| 16 | measurement: NBIRTH size (Spb40Demo) | 🐳 | ✅ reproduced live — `fat 328B vs thin 162B → 166B saved` |
 
 Honest scope (unchanged from the product's own README): single broker / edge / instance / localhost;
 the sim's transfer is instant setpoint = PV (a governance loop, not process physics).

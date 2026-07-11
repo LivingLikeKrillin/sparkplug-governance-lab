@@ -1,0 +1,29 @@
+>>> [NOTICE] Sparkplug 4.0 is unreleased (TCK 0/30, wire format not finalized). This is a concept prototype of #608/#607/#603 built with Sparkplug 3.0 primitives (Tahu Template/PropertySet).
+
+
+[CONSUMER] subscribed spBv1.0/Krillin/#
+[CONSUMER] << DEFINITION learned (new): MotorType@1.0.0 members=9 units={Rpm=rpm}
+[CONSUMER] << DEFINITION learned (new): Motor@1.1.0 members=3 units={Rpm=rpm, Temperature=degC}
+[DEF-PUB] >> spBv1.0/Krillin/DEFINITION/Spb40Edge/Motor (retained, 192B)
+[EDGE] >> spBv1.0/Krillin/NBIRTH/Spb40Edge thin seq=0 (162B)
+[CONSUMER] << NBIRTH resolved (SchemaRef[templateRef=Motor, version=1.1.0]):
+    Rpm (Double) = 1500.0  quality=GOOD  [rpm]
+    Running (Boolean) = true  quality=GOOD
+    Temperature (Double) = 65.4  quality=GOOD  [degC]
+[EDGE] >> spBv1.0/Krillin/NDATA/Spb40Edge thin seq=1 (162B)
+[CONSUMER] << NDATA resolved (SchemaRef[templateRef=Motor, version=1.1.0]):
+    Rpm (Double) = 1520.0  quality=GOOD  [rpm]
+    Running (Boolean) = true  quality=GOOD
+    Temperature (Double) = 66.1  quality=GOOD  [degC]
+[EDGE] >> spBv1.0/Krillin/NDATA/Spb40Edge thin seq=2 (162B)
+[CONSUMER] << NDATA resolved (SchemaRef[templateRef=Motor, version=1.1.0]):
+    Rpm (Double) = 1525.0  quality=GOOD  [rpm]
+    Running (Boolean) = true  quality=GOOD
+    Temperature (Double) = -999.0  quality=BAD  [degC]
+    ! governance violations:
+      - [quality.bad] Temperature
+
+>>> [#608 size] 3.0-style fat NBIRTH (inline _types_)=328B  vs  thin NBIRTH (schemaRef)=162B  -> 166B saved per rebirth (schema paid once as retained Definition 192B). Reduces BIRTH-storm overhead.
+>>> [contrast] Sparkplug 3.0 retransmits the full schema in every NBIRTH. #608 sends only a schemaRef ? the schema lives outside the data path.
+
+=== SPB40 DEMO DONE ===
