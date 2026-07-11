@@ -28,20 +28,36 @@ The **pure-CLI gates need no Docker**. The **edge gates** (marked 🐳) start Hi
 ## Setup
 
 ```bash
-# 1. clone both repos side by side
+# 0. verify the toolchain
+java -version          # must be 17.x
+mvn -version           # 3.9+
+python --version       # 3.x  (byte/JSON tamper helpers in the T4/T5/T7 gates)
+git --version
+git config user.name && git config user.email   # the anchor gate (T7 git AnchorStore) COMMITS — an identity must be set
+
+# 1. clone both repos side by side (same parent directory)
 git clone https://github.com/yggdrasil-iiot/bifrost.git
 git clone https://github.com/LivingLikeKrillin/sparkplug-governance-lab.git
 
-# 2. build bifrost (the governance product + gate CLIs + sim)
+# 2. build bifrost (the governance product + gate CLIs + sim). Run once; the gate scripts reuse the jars.
 cd bifrost
 mvn install            # Java 17 · core 223 / heimdall 42 / gates 68 / sim 7 · BUILD SUCCESS
 
-# 3. (edge gates only) make sure Docker Desktop is up and :1883 is free
-docker info >/dev/null && echo "docker ready"
+# 3. (edge gates 🐳 only) Docker Desktop up + host port 1883 free
+docker info >/dev/null 2>&1 && echo "docker ready"
+# is anything already on 1883? (Windows)  netstat -ano | findstr :1883    →  should print nothing
 ```
 
-Every gate is a `scripts/run-*-gate.sh` under `bifrost/`; run each from the `bifrost/` directory.
-Exit `0` = the whole gate passed; the script prints `... GATE PASS`.
+Every gate is a `scripts/run-*-gate.sh` under `bifrost/`; **run each from the `bifrost/` directory** (the
+scripts `cd` relative to themselves and stage a fresh temp registry under `build/` per run). Exit `0` = the
+whole gate passed and the script prints `... GATE PASS`; a non-zero exit prints `FAIL` with the failing case.
+
+**Detailed walkthroughs** — three experiments are documented step-by-step (what the gate stages internally,
+each case, full annotated output, troubleshooting). Read one of these to trust the method; the rest follow
+the same shape:
+- [`full-loop.md`](full-loop.md) — the headline observe→command→observe loop 🐳
+- [`composable-conformance.md`](composable-conformance.md) — ONE ConformancePolicy at design-time AND runtime 🐳
+- [`anchored-activation.md`](anchored-activation.md) — four-eyes head + external anchor (T7), AN1–AN7
 
 > **command-authz needs bifrost PR #7.** `run-command-authz-gate` was silently broken on `main` since
 > `a98e3cf` migrated value ranges out of `policy.json` into the governed conformance model (the shipped
@@ -143,6 +159,28 @@ mvn test -Dtest=LossLedgerTest,UaDataTypeMapperTest      # BUILD SUCCESS
   loss-class the thin representation relies on.
 
 ---
+
+## How to read a gate result
+
+- **Exit code** — `0` = the whole gate passed; non-zero = a case failed (the script prints `FAIL: <why>`).
+- **PASS marker** — each script ends with a line like `[GATE] PASS run-<x>-gate.sh` or `[<NAME>] GATE PASS (<cases>)`.
+- **Case labels** — a gate bundles several assertions with stable labels: `L1–L5` (full-loop), `A1–A5`
+  (activation), `LN1–LN4` (lineage), `I1–I7` (identity), `AZ1–AZ7` (authz), `AN1–AN8` (anchored),
+  `C1–C5` (composable). Each prints its own `=> PASS`. The captured evidence in [`outputs/`](outputs/)
+  shows every label for a green run — compare your run line-by-line.
+- **`SKIP_*` flags** — some gates have an optional broker leg gated behind `SKIP_I7=1` / `SKIP_AN8=1`;
+  the rest of the gate still runs and passes without it.
+
+## Troubleshooting
+
+| Symptom | Cause → fix |
+|---|---|
+| `docker not found` / broker never opens `:1883` | Docker Desktop not running, or `:1883` already taken. Start Docker; free the port (`netstat -ano \| findstr :1883`, stop the owner). CLI-only gates don't need this. |
+| gate uses OLD behavior after you edited bifrost code | the scripts rebuild jars only **if missing**. Force a rebuild: `mvn -q -pl core,gates,heimdall,sim -am install -DskipTests`. |
+| T7 anchor gate fails to commit the anchor repo | no git identity — `git config --global user.email ...` and `user.name ...` before running. |
+| `python: command not found` in T4/T5/T7 gates | the byte/JSON tamper helpers need Python 3 on `PATH`. |
+| leftover `java` / sim / broker after a killed run | the scripts self-clean on exit, but if interrupted: stop stray `bifrost-sim.jar` / `bifrost-heimdall.jar` processes and `docker compose stop hivemq-ce`. |
+| `command-authz` rejects the good policy (`lint-3`) | you're on plain `main`; check out bifrost **PR #7** (see the note above). |
 
 ## Full result matrix (controller-run 2026-07-12)
 
