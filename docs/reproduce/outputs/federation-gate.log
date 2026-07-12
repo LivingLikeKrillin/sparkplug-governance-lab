@@ -1,0 +1,37 @@
+[FED] step 0: build core+gates(+heimdall+sim) jars
+[FED] step 1: keygen alice/bob -> enterprise authorized-keys.jsonl
+[FED] keys ready (alice activator, bob approver — both enterprise-registered)
+[FED] step 2: build the ENTERPRISE git registry (authority) + enterprise anchor
+[FED] enterprise registry committed (templates + policy + identity + recipe artifacts)
+[FED] step 3: mirror-clone the enterprise registry to two SITES (full clone = local-first)
+[FED] sites cloned: busan, ulsan
+[FED] ===== F1: enterprise template governs both sites (site ⊨ enterprise) =====
+[FED] F1 => PASS (both sites conform to the enterprise template; non-conforming rejected)
+[FED] ===== F5: cross-domain anchor rollback caught by the ENTERPRISE anchor =====
+[FED] F5 => PASS (enterprise anchor catches the site co-rollback, exit 1)
+[FED] NOTE: F5 un-rewritability is TOPOLOGICAL (enterprise anchor is a separate repo the site
+[FED]       never rewrites), NOT cryptographic — production needs a protected off-box remote
+[FED]       (out of scope, same honest residual as T7).
+[FED] ===== F6: enterprise federated audit across both sites =====
+[FED] F6 => PASS (cross-site audit view):
+[FED]   [GATE] federation-audit target=Line1 sites=2 totalEvents=3
+[FED]     site=busan active=1.0.0 events=1
+[FED]     site=ulsan active=1.1.0 events=2
+[FED] runtime: build heimdall + sim jars
+[FED] runtime: fresh mirror clones rt-busan / rt-ulsan
+[FED] runtime: per-site activation (busan=1.0.0, ulsan=1.1.0)
+[FED] runtime: start both brokers (:1883 busan, :1884 ulsan)
+[FED] runtime: start both sims (:48400 busan, :48401 ulsan)
+[FED] ===== F3: per-site independent activation + enforcement =====
+[FED] F3: busan bound @1.0.0, ulsan bound @1.1.0 (independent per-site versions)
+[FED] F3 => PASS (per-site bind + independent rogue deny)
+[FED] ===== F2: governance propagation (enterprise policy edit -> git pull -> restart) =====
+[FED] F2 baseline: busan APPLYs Rpm (rule present)
+[FED] F2: enterprise revoked busan Rpm; busan pulled the change
+[FED] F2 => PASS (enterprise revocation propagated via git pull; enforced at next restart)
+[FED] ===== F4: local-first (WAN outage — site keeps enforcing offline) =====
+[FED] F4: enterprise unreachable — ulsan git fetch fails (as expected)
+[FED] F4: ulsan still enforces locally while offline
+[FED] F4 => PASS (offline serving + reconnect reconcile)
+[FED] runtime: F2 F3 F4 all PASS
+[FED] GATE PASS (F1 F5 F6 +F2 F3 F4)
