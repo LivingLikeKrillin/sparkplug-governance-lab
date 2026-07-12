@@ -1,0 +1,58 @@
+>>> [HONESTY] This mapping is NOT lossless. Loss is acknowledged in the ledger; the lossless truth is preserved in the ua_statuscode/ua_ticks side-channels. SpB 4.0 is not yet published -- this is a concept prototype.
+
+==================== 1. Live OPC UA browse (Milo) ====================
+
+02:52:40.369 INFO  o.e.m.o.s.c.OpcUaClient - Java version: 21.0.11
+02:52:40.387 INFO  o.e.m.o.s.c.OpcUaClient - Eclipse Milo OPC UA Stack version: 1.0.0
+02:52:40.387 INFO  o.e.m.o.s.c.OpcUaClient - Eclipse Milo OPC UA Client SDK version: 1.0.0
+[OPCUA] connected opc.tcp://127.0.0.1:4840/freeopcua/server/
+[OPCUA] browsed type space nodes = [MotorType, EquipmentType, IVendorNameplateType, ITagNameplateType]
+    MotorType  super=EquipmentType  interfaces=[IVendorNameplateType, ITagNameplateType]  members=[Rpm, Running, Torque]
+    EquipmentType  super=-  interfaces=[]  members=[OperationalState, LastMaintenance]
+    IVendorNameplateType  super=-  interfaces=[]  members=[Manufacturer, SerialNumber]
+    ITagNameplateType  super=-  interfaces=[]  members=[AssetId, Location]
+
+==================== 2. OPC UA information model -> UDT mapping + loss ledger ====================
+[MAP] UdtDefinition MotorType@1.0.0  members=9
+[LEDGER] 9 members: 8 clean / 1 side-channel preserved / 0 type-identity lost
+[LEDGER] NOTE: all 4 LossClasses are unit-tested; this live instance exercises CLEAN + PRECISION_LOSS (UNKNOWN handling now exists for unmapped DataTypes).
+[LEDGER] Per-member entries (alias = flattening order):
+    alias#1  Rpm              DOUBLE    -> Double     [CLEAN]  <ObjectType chain(OWN:MotorType)>
+    alias#2  Running          BOOLEAN   -> Boolean    [CLEAN]  <ObjectType chain(OWN:MotorType)>
+    alias#3  Torque           FLOAT     -> Float      [CLEAN]  <ObjectType chain(OWN:MotorType)>
+    alias#4  OperationalState INT32     -> Int32      [CLEAN]  <ObjectType chain(SUPERTYPE:EquipmentType)>
+    alias#5  LastMaintenance  DATETIME  -> DateTime   [PRECISION_LOSS]  side-channel=UA_TICKS  <ObjectType chain(SUPERTYPE:EquipmentType)>
+    alias#6  Manufacturer     STRING    -> String     [CLEAN]  <INTERFACE(IVendorNameplateType)>
+    alias#7  SerialNumber     STRING    -> String     [CLEAN]  <INTERFACE(IVendorNameplateType)>
+    alias#8  AssetId          STRING    -> String     [CLEAN]  <INTERFACE(ITagNameplateType)>
+    alias#9  Location         STRING    -> String     [CLEAN]  <INTERFACE(ITagNameplateType)>
+[PROVENANCE] Interface members inlined into UDT via flattening (based on real provenance) = [Manufacturer via IVendorNameplateType, SerialNumber via IVendorNameplateType, AssetId via ITagNameplateType, Location via ITagNameplateType]  (HasInterface multiple inheritance)
+[CONFLICTS] none (deterministic flattening -- no interface type conflicts)
+
+==================== 3. Consumer connect + subscribe (before publish) ====================
+[CONSUMER] subscribed DEFINITION/# + +/OpcUaEdge
+
+==================== 4. Publish -- #608 Definition (retained) + thin NDATA ====================
+[PUB] >> DEFINITION spBv1.0/Krillin/DEFINITION/OpcUaEdge/MotorType@1.0.0  (retained, 320B, units={Rpm=rpm})
+[CONSUMER] << DEFINITION learned (new) MotorType@1.0.0 members=9 units={Rpm=rpm}
+[OPCUA] Motor1 samples read = 9
+[PUB] >> NDATA spBv1.0/Krillin/NDATA/OpcUaEdge  (thin, 630B)
+
+[CONSUMER] << NDATA resolved (SchemaRef[templateRef=MotorType, version=1.0.0]): typed view
+    Rpm              (Double  ) = 1880.0         quality=GOOD  [rpm]
+    Running          (Boolean ) = true           quality=GOOD
+    Torque           (Float   ) = 12.5           quality=GOOD
+    OperationalState (Int32   ) = 2              quality=GOOD
+    LastMaintenance  (DateTime) = Wed May 20 17:30:00 KST 2026 quality=GOOD
+    Manufacturer     (String  ) = Acme Drives    quality=GOOD
+    SerialNumber     (String  ) = SN-00042       quality=GOOD
+    AssetId          (String  ) = ASSET-Motor1   quality=GOOD
+    Location         (String  ) = Line3/Cell2    quality=GOOD
+    --- side-channel (lossless truth) restoration ---
+    alias#1  ua_statuscode=0x40000000 severity=Uncertain (quality projection=GOOD; truth is in ua_statuscode -- loss boundary)
+    alias#5  ua_ticks=134237394000000000 (OPC UA 100ns/1601, lossless) vs Sparkplug ms=1779265800000 (10,000x precision + epoch loss)
+
+==================== Shutdown ====================
+
+=== OPC UA -> UDT BRIDGE DEMO DONE ===
+>>> Live type hierarchy browse -> UDT (with inlined interface members) -> loss ledger -> #608 Definition + thin round-trip -> side-channel restoration. NOT lossless -- demonstrated in code.

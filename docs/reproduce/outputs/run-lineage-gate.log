@@ -1,0 +1,31 @@
+[LINEAGE] step 0: build jars if missing (core, sim, gates, heimdall)
+[LINEAGE] gates=C:/Users/Eisen/Desktop/Labs/[iiot]/bifrost/gates/target/bifrost-gates.jar
+[LINEAGE] heimdall=C:/Users/Eisen/Desktop/Labs/[iiot]/bifrost/heimdall/target/bifrost-heimdall.jar
+[LINEAGE] sim=C:/Users/Eisen/Desktop/Labs/[iiot]/bifrost/sim/target/bifrost-sim.jar
+[LINEAGE] step 1: stage the governed registry (udt + recipe conformance + spec 1.0.0/1.1.0 + policy)
+[LINEAGE] ===== LN1: chain intact + audited (pure CLI, no broker) =====
+[GATE] activated target=Line1 kind=recipe ref=mix-recipe version=1.0.0 action=ACTIVATE by=alice approvedBy=bob sha256=9a9d76c37b911d8e3055fe0549dfb06478fbab0134053bbb2ccf55f31d6ceb98
+[GATE] activated target=Line1 kind=recipe ref=mix-recipe version=1.1.0 action=ACTIVATE by=alice approvedBy=bob sha256=b06b79330bf4957990642e671059c00d1e1f8a7f0c3984bfef7107389437c20c
+[GATE] verify-chain target=Line1 entries=2 => INTACT
+[LINEAGE] LN1a: verify-chain => INTACT entries=2 (exit 0)
+[LINEAGE] LN1b: activation-log shows both entries (events=2)
+[LINEAGE] LN1c: raw ledger chained - entry#1 prevHash==GENESIS, entry#2 prevHash==entry#1 entryHash
+[LINEAGE] LN1 chain intact + audited => PASS
+[LINEAGE] ===== LN2: edit past event detected =====
+[LINEAGE] LN2 edit past event => PASS (entry-hash-mismatch at index=0, exit 1; chain restored)
+[LINEAGE] ===== LN3: delete middle event detected =====
+[GATE] activated target=Line1 kind=recipe ref=mix-recipe version=1.0.0 action=ROLLBACK by=alice approvedBy=bob sha256=9a9d76c37b911d8e3055fe0549dfb06478fbab0134053bbb2ccf55f31d6ceb98
+[LINEAGE] LN3 delete middle event => PASS (prev-link-broken, exit 1; chain restored)
+[LINEAGE] step 2: start HiveMQ CE (broker) + wait for :1883
+[LINEAGE] HiveMQ CE up on :1883
+[LINEAGE] step 3: start the OPC-UA sim
+[LINEAGE] OPC-UA sim listening (pid 50444)
+[LINEAGE] ===== LN4: edge enforcement (the closed loop) =====
+[GATE] activated target=Line1 kind=recipe ref=mix-recipe version=1.1.0 action=ACTIVATE by=alice approvedBy=bob sha256=b06b79330bf4957990642e671059c00d1e1f8a7f0c3984bfef7107389437c20c
+[LINEAGE] LN4a: edge bound mix-recipe@1.1.0 over an intact chain
+[LINEAGE] LN4b: authorized NCMD Rpm=1600 APPLYed (T3 behavior intact atop the chained ledger)
+[LINEAGE] LN4c: tampered chain -> activation.edge.ledger-chain-broken, edge NEVER bound (fail-closed)
+[LINEAGE] LN4 edge enforcement => PASS
+[LINEAGE] step 9: teardown
+
+[LINEAGE] GATE PASS (LN1-LN4)

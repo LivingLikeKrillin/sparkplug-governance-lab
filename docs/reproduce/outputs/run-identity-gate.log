@@ -1,0 +1,26 @@
+[IDENTITY] step 0: build the identity-aware gates jar (core+gates)
+[IDENTITY] gates=C:/Users/Eisen/Desktop/Labs/[iiot]/bifrost/gates/target/bifrost-gates.jar
+[IDENTITY] step 1: keygen the principals + build the canonical authorized-keys.jsonl
+[IDENTITY] keys ready (alice,bob,carol,dave registered; dave⊇carol pubkey; mallory unregistered)
+[IDENTITY] ===== I1: signed activate -> verify-signed INTACT =====
+[IDENTITY] I1 => PASS (signed activate + verify-signed INTACT)
+[IDENTITY] ===== I2: tamper a signature byte -> identity.sig.invalid =====
+[IDENTITY] I2 => PASS (identity.sig.invalid, exit 1)
+[IDENTITY] ===== I3: activate with an unregistered principal -> identity.key.principal-mismatch =====
+[IDENTITY] I3 => PASS (activate-time identity.key.principal-mismatch, ledger untouched)
+[IDENTITY] ===== I4: four-eyes / key-binding refusals =====
+[IDENTITY] I4a => PASS (activation.approval.self)
+[IDENTITY] I4b => PASS (identity.key.principal-mismatch on a mismatched approver key file)
+[IDENTITY] I4c => PASS (identity.four-eyes.same-key)
+[IDENTITY] ===== I5: tail-truncation (delete last line, keep head) -> identity.head.tail-mismatch =====
+[IDENTITY] I5 => PASS (identity.head.tail-mismatch, exit 1)
+[IDENTITY] ===== I6: full structural re-chain without re-signing -> identity.sig.invalid =====
+[IDENTITY] I6 => PASS (structural chain re-validates but identity.sig.invalid)
+[IDENTITY] ===== I7: edge fail-closed on a broken SIGNED ledger (REQUIRE_SIGNED_ACTIVATION=on) =====
+[IDENTITY] I7: build heimdall + sim jars
+[IDENTITY] I7: start HiveMQ CE + wait for :1883
+[IDENTITY] I7: start the OPC-UA sim
+[IDENTITY] I7: start Heimdall with REQUIRE_SIGNED_ACTIVATION=on against the broken signed ledger
+[IDENTITY] I7 => PASS (activation.edge.signed-ledger-broken, edge NEVER bound)
+
+[IDENTITY] GATE PASS (I1-I6 +I7)

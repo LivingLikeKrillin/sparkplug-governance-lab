@@ -1,0 +1,63 @@
+[GATE] step 0: build jars if missing
+
+[P1] accept — conforming site (tightens ranges + extends WeldVoltage) must PASS (exit 0)
+[GATE] site=Ulsan-Weld conformsTo=WeldController-corp@1.0.0 members=4
+[GATE] PASS ?
+[P1] OK: conforming site returned 0
+
+[P2] reject ×3 — each non-conforming site must FAIL (exit 1) with its rule
+[P2:exceeds] WeldCurrent [0,20] exceeds envelope [0,15]
+[GATE] site=Ulsan-Weld conformsTo=WeldController-corp@1.0.0 members=3
+[GATE] FAIL ? ? violations:
+  - [template.range.exceeds-envelope] member 'WeldCurrent' high 20.0 > template high 15.0
+[P2:exceeds] OK: exit 1 + template.range.exceeds-envelope
+[P2:missing] site drops required member WeldTime
+[GATE] site=Ulsan-Weld conformsTo=WeldController-corp@1.0.0 members=2
+[GATE] FAIL ? ? violations:
+  - [template.member.missing] site 'Ulsan-Weld' is missing required member 'WeldTime' from template 'WeldController-corp'
+[P2:missing] OK: exit 1 + template.member.missing
+[P2:semanticid] WeldCurrent semanticId ulsan:current != corp:weld/current
+[GATE] site=Ulsan-Weld conformsTo=WeldController-corp@1.0.0 members=3
+[GATE] FAIL ? ? violations:
+  - [template.semanticId.mismatch] member 'WeldCurrent' semanticId 'ulsan:current' != template 'corp:weld/current'
+[P2:semanticid] OK: exit 1 + template.semanticId.mismatch
+
+[P3] three-adapter equivalence — Ignition / CFIHOS / AAS adapt to a template with IDENTICAL verdicts
+[P3:ignition] non-circularity — must contain foreign 'engLow' and NO Bifrost keys "members"/"low"
+[P3:ignition] OK: genuinely foreign vocabulary
+[P3:ignition] adapt-template ignition -> canonical UdtDefinition
+[GATE] adapted ignition -> C:/Users/Eisen/AppData/Local/Temp/tmp.Lc5lqp7uqr/adapted-ignition.json (ref=WeldController-corp@1.0.0, members=3)
+[P3:ignition] adapted template must ACCEPT conforming site (same as P1)
+[GATE] site=Ulsan-Weld conformsTo=WeldController-corp@1.0.0 members=4
+[GATE] PASS ?
+[P3:ignition] adapted template must REJECT exceeds site (same as P2)
+[GATE] site=Ulsan-Weld conformsTo=WeldController-corp@1.0.0 members=3
+[GATE] FAIL ? ? violations:
+  - [template.range.exceeds-envelope] member 'WeldCurrent' high 20.0 > template high 15.0
+[P3:ignition] OK: adapted template drives IDENTICAL verdicts to native (accept + reject)
+[P3:cfihos] non-circularity — must contain foreign 'propertyId' and NO Bifrost keys "members"/"low"
+[P3:cfihos] OK: genuinely foreign vocabulary
+[P3:cfihos] adapt-template cfihos -> canonical UdtDefinition
+[GATE] adapted cfihos -> C:/Users/Eisen/AppData/Local/Temp/tmp.Lc5lqp7uqr/adapted-cfihos.json (ref=WeldController-corp@1.0.0, members=3)
+[P3:cfihos] adapted template must ACCEPT conforming site (same as P1)
+[GATE] site=Ulsan-Weld conformsTo=WeldController-corp@1.0.0 members=4
+[GATE] PASS ?
+[P3:cfihos] adapted template must REJECT exceeds site (same as P2)
+[GATE] site=Ulsan-Weld conformsTo=WeldController-corp@1.0.0 members=3
+[GATE] FAIL ? ? violations:
+  - [template.range.exceeds-envelope] member 'WeldCurrent' high 20.0 > template high 15.0
+[P3:cfihos] OK: adapted template drives IDENTICAL verdicts to native (accept + reject)
+[P3:aas] non-circularity — must contain foreign 'submodelElements' and NO Bifrost keys "members"/"low"
+[P3:aas] OK: genuinely foreign vocabulary
+[P3:aas] adapt-template aas -> canonical UdtDefinition
+[GATE] adapted aas -> C:/Users/Eisen/AppData/Local/Temp/tmp.Lc5lqp7uqr/adapted-aas.json (ref=WeldController-corp@1.0.0, members=3)
+[P3:aas] adapted template must ACCEPT conforming site (same as P1)
+[GATE] site=Ulsan-Weld conformsTo=WeldController-corp@1.0.0 members=4
+[GATE] PASS ?
+[P3:aas] adapted template must REJECT exceeds site (same as P2)
+[GATE] site=Ulsan-Weld conformsTo=WeldController-corp@1.0.0 members=3
+[GATE] FAIL ? ? violations:
+  - [template.range.exceeds-envelope] member 'WeldCurrent' high 20.0 > template high 15.0
+[P3:aas] OK: adapted template drives IDENTICAL verdicts to native (accept + reject)
+
+[GATE] PASS run-template-conformance-gate.sh

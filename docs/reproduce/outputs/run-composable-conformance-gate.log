@@ -1,0 +1,37 @@
+[GATE] step 0: build jars if missing (core, sim, gates, heimdall)
+[GATE] heimdall=C:/Users/Eisen/Desktop/Labs/[iiot]/bifrost/heimdall/target/bifrost-heimdall.jar
+[GATE] sim=C:/Users/Eisen/Desktop/Labs/[iiot]/bifrost/sim/target/bifrost-sim.jar
+[GATE] gates=C:/Users/Eisen/Desktop/Labs/[iiot]/bifrost/gates/target/bifrost-gates.jar
+[GATE] step 1: start HiveMQ CE (broker) + wait for :1883
+[GATE] HiveMQ CE up on :1883
+[GATE] step 2: set up the work registry (copy governed fixtures) + start the OPC-UA sim
+[GATE] OPC-UA sim listening (pid 51118)
+[GATE] ===== C1: composition (runtime) — envelope cross-member DENY then APPLY =====
+[GATE] edge up with envelope conformance loaded (pid 51125)
+[GATE] C1a: WeldCurrent=9 DENIED by composed cross-member rule (conformance.cross.weld-lobe)
+[GATE] C1 OK: composition holds at runtime (9 denied, 7 applied)
+[GATE] ===== C2: design==runtime — same governed policy drives the CI gate =====
+[GATE] ref=WeldRejectA equipment=Weld-Controller@1.0.0 setpoints=2
+[GATE] FAIL ? ? violations:
+  - [conformance.cross.weld-lobe] cross-member weld-lobe: when ElectrodeForce lt 3.0, require WeldCurrent le 8.0 (was 9.0)
+[GATE] C2a: design-time gate REJECTED the same-shape spec (exit 1)
+[GATE] ref=WeldAcceptA equipment=Weld-Controller@1.0.0 setpoints=2
+[GATE] PASS ?
+[GATE] C2 OK: design==runtime — one governed policy, identical verdict on gate and edge
+[GATE] ===== C3: single-source flip — edit ONE governed policy, BOTH boundaries move =====
+[GATE] ref=WeldRejectA equipment=Weld-Controller@1.0.0 setpoints=2
+[GATE] PASS ?
+[GATE] C3a: design-time gate now ACCEPTS the same spec (flip seen by the CI gate)
+[GATE] C3 OK: one governed edit moved BOTH the CI gate and the runtime edge (single source of truth)
+[GATE] ===== C4: dial — swap envelope -> recipe-mode (active WeldSchedule, tol 0) =====
+[GATE] C4a: WeldCurrent=7 DENIED as a deviation from the approved recipe (conformance.recipe.deviation)
+[GATE] C4 OK: the governed dial re-scoped the SAME node from envelope to exact-recipe conformance
+[GATE] ===== C5: lifecycle — provenance publish/verify the governed policy bytes =====
+[PUBLISH] recipe Weld-Controller-policy/1.0.0 defRef=12f33e96783ac3bd154375c39790d663bef9b04e sha256=0e136c921fa4d397af512d11561a0a436200cd2aba6ceb5e43cc1a74e76050d9
+[PROV-GATE] verify ref=Weld-Controller-policy version=1.0.0 sha256=0e136c921fa4d397af512d11561a0a436200cd2aba6ceb5e43cc1a74e76050d9 => OK
+[GATE] C5a: provenance verify accepted the clean published policy (exit 0)
+[PROV-GATE] verify ref=Weld-Controller-policy version=1.0.0 sha256=fded7139c920ba98449fb6b4470e07f5b9913f06ac2cea7bb9275ead8c96082e manifest=0e136c921fa4d397af512d11561a0a436200cd2aba6ceb5e43cc1a74e76050d9 => MISMATCH (tampered or unresolvable)
+[GATE] C5 OK: provenance verify accepted clean, rejected a one-byte tamper (governed-policy lifecycle)
+[GATE] step 9: teardown
+
+[GATE] PASS run-composable-conformance-gate.sh

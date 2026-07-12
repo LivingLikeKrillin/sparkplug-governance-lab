@@ -1,0 +1,19 @@
+[GATE] step 0: build jars if missing
+[GATE] heimdall=C:/Users/Eisen/Desktop/Labs/[iiot]/bifrost/heimdall/target/bifrost-heimdall.jar
+[GATE] sim=C:/Users/Eisen/Desktop/Labs/[iiot]/bifrost/sim/target/bifrost-sim.jar
+[GATE] policy=C:/Users/Eisen/Desktop/Labs/[iiot]/bifrost/heimdall/registry/policy.json
+[GATE] step 1: start HiveMQ CE (broker) + wait for :1883
+[GATE] HiveMQ CE up on :1883
+[GATE] step 2: start the embedded OPC-UA sim
+[GATE] OPC-UA sim listening (pid 51440)
+[GATE] step 3: start the Heimdall daemon + wait for [BRIDGE] ready
+[GATE] Heimdall ready (pid 51451)
+[GATE] ===== T1: authorized — Rpm=1500 -> bridge APPLY ok=true (write+read-back confirmed) =====
+[GATE] T1 sim witness: [SIM] SET ns=2;s=Recipe/Rpm = 1500.0 (or 1500) observed
+[GATE] T1 OK: authorized NCMD applied and confirmed by OPC-UA read-back
+[GATE] ===== T2: rogue deny-by-default — unregistered node -> bridge DENY, never APPLY =====
+[GATE] T2 OK: rogue deny-by-default node denied at the edge, never applied
+[GATE] ===== T3: defense-in-depth — Rpm=9999 (allowed node, out of range) -> DENY above-max =====
+[GATE] T3 OK: out-of-range command denied at the edge (above-max), no new APPLY
+
+[GATE] PASS run-ncmd-runtime-gate.sh

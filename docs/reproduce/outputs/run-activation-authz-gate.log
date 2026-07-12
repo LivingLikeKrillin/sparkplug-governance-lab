@@ -1,0 +1,24 @@
+[AUTHZ] step 0: build the identity-aware gates jar (core+gates)
+[AUTHZ] gates=C:/Users/Eisen/Desktop/Labs/[iiot]/bifrost/gates/target/bifrost-gates.jar
+[AUTHZ] step 1: keygen the principals (alice,bob,carol) + build authorized-keys.jsonl
+[AUTHZ] keys ready (alice,bob,carol registered)
+[AUTHZ] ===== AZ1: authorized alice(ACTIVATE)+bob(APPROVE) signed activate -> exit 0, INTACT =====
+[AUTHZ] AZ1 => PASS (authorized signed activate + verify-signed INTACT)
+[AUTHZ] ===== AZ2: unauthorized activator (carol, no ACTIVATE) -> activation.authz.denied =====
+[AUTHZ] AZ2 => PASS (activation.authz.denied on unauthorized activator, ledger untouched)
+[AUTHZ] ===== AZ3: unauthorized approver (carol, no APPROVE) -> activation.authz.denied =====
+[AUTHZ] AZ3 => PASS (activation.authz.denied on unauthorized approver)
+[AUTHZ] ===== AZ4: absent policy = deny-all -> activation.authz.denied =====
+[AUTHZ] AZ4 => PASS (absent policy denies every signed activation, deny-by-default)
+[AUTHZ] ===== AZ5: gates identity authorize — allow (activate) exit 0 / deny (approve) exit 1 =====
+[AUTHZ] AZ5 => PASS (authorize allow=0 / deny=1)
+[AUTHZ] ===== AZ6/AZ7: edge authZ re-check (REQUIRE_SIGNED_ACTIVATION=on) =====
+[AUTHZ] AZ6/AZ7: build heimdall + sim jars
+[AUTHZ] AZ6/AZ7: start HiveMQ CE + wait for :1883
+[AUTHZ] AZ6/AZ7: start the OPC-UA sim
+[AUTHZ] AZ7: start Heimdall (authorized policy, REQUIRE_SIGNED_ACTIVATION=on) -> expect authz=ok + bind
+[AUTHZ] AZ7 => PASS (edge authz = ok, activation bound)
+[AUTHZ] AZ6: rewrite policy REMOVING alice's ACTIVATE, restart Heimdall -> expect authz-denied, no bind
+[AUTHZ] AZ6 => PASS (activation.edge.authz-denied, edge NEVER bound — revocation is bind-fresh)
+
+[AUTHZ] GATE PASS (AZ1-AZ5 +AZ6-AZ7)

@@ -1,0 +1,23 @@
+01:53:48,296 |-INFO in ch.qos.logback.classic.LoggerContext[default] - This is logback-classic version 1.3.14
+01:53:48,299 |-INFO in ch.qos.logback.classic.util.ContextInitializer@4b86805d - No custom configurators were discovered as a service.
+01:53:48,299 |-INFO in ch.qos.logback.classic.util.ContextInitializer@4b86805d - Trying to configure with ch.qos.logback.classic.joran.SerializedModelConfigurator
+01:53:48,301 |-INFO in ch.qos.logback.classic.util.ContextInitializer@4b86805d - Constructed configurator of type class ch.qos.logback.classic.joran.SerializedModelConfigurator
+01:53:48,301 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Could NOT find resource [logback-test.scmo]
+01:53:48,302 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Could NOT find resource [logback.scmo]
+01:53:48,302 |-INFO in ch.qos.logback.classic.util.ContextInitializer@4b86805d - ch.qos.logback.classic.joran.SerializedModelConfigurator.configure() call lasted 1 milliseconds. ExecutionStatus=INVOKE_NEXT_IF_ANY
+01:53:48,302 |-INFO in ch.qos.logback.classic.util.ContextInitializer@4b86805d - Trying to configure with ch.qos.logback.classic.util.DefaultJoranConfigurator
+01:53:48,303 |-INFO in ch.qos.logback.classic.util.ContextInitializer@4b86805d - Constructed configurator of type class ch.qos.logback.classic.util.DefaultJoranConfigurator
+01:53:48,304 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Could NOT find resource [logback-test.xml]
+01:53:48,304 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Found resource [logback.xml] at [file:/C:/Users/Eisen/Desktop/Labs/%5Biiot%5D/sparkplug-governance-lab/target/classes/logback.xml]
+01:53:48,305 |-WARN in ch.qos.logback.classic.util.DefaultJoranConfigurator@5852c06f - Resource [logback.xml] occurs multiple times on the classpath.
+01:53:48,305 |-WARN in ch.qos.logback.classic.util.DefaultJoranConfigurator@5852c06f - Resource [logback.xml] occurs at [jar:file:/C:/Users/Eisen/.m2/repository/org/eclipse/tahu/tahu-core/1.0.14/tahu-core-1.0.14.jar!/logback.xml]
+01:53:48,305 |-WARN in ch.qos.logback.classic.util.DefaultJoranConfigurator@5852c06f - Resource [logback.xml] occurs at [file:/C:/Users/Eisen/Desktop/Labs/%5Biiot%5D/sparkplug-governance-lab/target/classes/logback.xml]
+01:53:48,509 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [STDOUT]
+01:53:48,509 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.ConsoleAppender]
+01:53:48,525 |-INFO in ch.qos.logback.core.model.processor.ImplicitModelHandler - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+01:53:48,605 |-INFO in ch.qos.logback.classic.model.processor.RootLoggerModelHandler - Setting level of ROOT logger to INFO
+01:53:48,605 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [STDOUT] to Logger[ROOT]
+01:53:48,607 |-INFO in ch.qos.logback.core.model.processor.DefaultProcessor@4149c063 - End of configuration.
+01:53:48,609 |-INFO in ch.qos.logback.classic.joran.JoranConfigurator@9cb8225 - Registering current configuration as safe fallback point
+01:53:48,609 |-INFO in ch.qos.logback.classic.util.ContextInitializer@4b86805d - ch.qos.logback.classic.util.DefaultJoranConfigurator.configure() call lasted 306 milliseconds. ExecutionStatus=DO_NOT_INVOKE_NEXT_IF_ANY
+
