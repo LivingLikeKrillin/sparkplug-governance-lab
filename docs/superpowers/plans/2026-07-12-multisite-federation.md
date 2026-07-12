@@ -14,6 +14,8 @@
 
 **Repo paths in this plan:** all `bifrost/…` paths are under `C:\Users\Eisen\Desktop\Labs\[iiot]\bifrost`. All `lab/…` paths are under `C:\Users\Eisen\Desktop\Labs\[iiot]\sparkplug-governance-lab`.
 
+**Shell cwd note:** the Bash tool's cwd resets to the bifrost dir between calls. The `cd bifrost && …` / `cd "sparkplug-governance-lab" && …` in the steps below assume the `[iiot]` monorepo parent as the base — if a call starts from inside `bifrost`, use the absolute repo path instead (`cd "C:/Users/Eisen/Desktop/Labs/[iiot]/bifrost"` / `.../sparkplug-governance-lab`). Establish the base explicitly per call; do not chain `cd` across calls.
+
 ---
 
 ## File Structure
@@ -75,7 +77,7 @@ class EmbeddedMiloSimConfigTest {
     }
 
     @Test void simMain_resolvesPortFromEnv_defaulting48400() {
-        assertEquals(48400, SimMain.resolvePort(Map.of()));
+        assertEquals(EmbeddedMiloSim.BIND_PORT, SimMain.resolvePort(Map.of()));  // 48400
         assertEquals(48401, SimMain.resolvePort(Map.of("SIM_BIND_PORT", "48401")));
     }
 
@@ -93,11 +95,11 @@ Expected: FAIL — compile error (`bindPort()`/`bindHost()`/parameterized ctor /
 
 - [ ] **Step 3: Implement — `EmbeddedMiloSim` ctor + fields**
 
-In `EmbeddedMiloSim.java`: replace the `static final int BIND_PORT = 48400;` constant usage with instance fields + constructors. Keep the `NAMESPACE_URI` constant. Keep a `DEFAULT_BIND_PORT` for `SimMain`'s log/back-compat.
+In `EmbeddedMiloSim.java`: **KEEP** the existing `static final int BIND_PORT = 48400;` constant unchanged — two existing tests (`MixerTypeNodeTest`, `WeldControllerNodeTest`, 7 references total) read `EmbeddedMiloSim.BIND_PORT` and would fail to test-compile if it were renamed/removed. Add a `DEFAULT_BIND_HOST` constant and instance fields + constructors that default to `BIND_PORT`/`DEFAULT_BIND_HOST`.
 
 ```java
     static final String NAMESPACE_URI = "urn:bifrost:opcua:sim";
-    static final int DEFAULT_BIND_PORT = 48400;
+    static final int BIND_PORT = 48400;              // RETAINED default (existing tests reference this)
     static final String DEFAULT_BIND_HOST = "localhost";
 
     private final int bindPort;
@@ -105,7 +107,7 @@ In `EmbeddedMiloSim.java`: replace the `static final int BIND_PORT = 48400;` con
     private OpcUaServer server;
     private SimNamespace namespace;
 
-    EmbeddedMiloSim() { this(DEFAULT_BIND_PORT, DEFAULT_BIND_HOST); }
+    EmbeddedMiloSim() { this(BIND_PORT, DEFAULT_BIND_HOST); }
 
     EmbeddedMiloSim(int bindPort, String bindHost) {
         this.bindPort = bindPort;
@@ -165,7 +167,7 @@ public final class SimMain {
 
     static int resolvePort(Map<String, String> env) {
         String v = env.get("SIM_BIND_PORT");
-        return (v == null || v.isBlank()) ? EmbeddedMiloSim.DEFAULT_BIND_PORT : Integer.parseInt(v.trim());
+        return (v == null || v.isBlank()) ? EmbeddedMiloSim.BIND_PORT : Integer.parseInt(v.trim());
     }
 
     static String resolveHost(Map<String, String> env) {
@@ -485,7 +487,7 @@ public final class FederationGate {
 
 - [ ] **Step 4: Wire into `GatesCli`**
 
-In `GatesCli.run`, add a `federation` case and extend the usage string. The usage lines:
+In `GatesCli.run`, add a `federation` case and extend the usage string. Also add `federation` to the class-javadoc subcommand list (line 7 of `GatesCli.java`) so the two lists stay in sync. The usage lines:
 
 ```java
             System.err.println("Usage: gates <schema|spec|template|adapt-template|policy|provenance|activate|active|activation-log|activation|identity|federation> <args...>");
@@ -667,4 +669,4 @@ cd "sparkplug-governance-lab" && git add docs/reproduce/ && git commit -m "docs(
 
 1. **Build go/no-go.** This plan is the design deliverable; per the standing agreement the actual build is a separate decision. Confirm before Task 1.
 2. **bifrost branch name** for the code (suggest `feat/multisite-federation`), created off `main` — not committed to main.
-3. **How honest to make F5 in the demo** — this plan prints the "topological, not cryptographic" note in the gate output. Confirm that's the desired framing (vs. adding a real protected-remote leg, which the spec scoped OUT).
+3. **How honest to make F5 in the demo** — this plan prints the "topological, not cryptographic" note in the gate output. Confirm that's the desired framing (vs. adding a real protected-remote leg, which the spec scoped OUT). **Be aware:** mechanically F5 ≈ the existing AN3 assertion re-run with the anchor dir relocated to the enterprise domain — there is **no new cryptographic mechanism**, only topology + the honest caveat. AN3 already keeps its git anchor in a separate directory from the registry, so F5's "different trust domain" is a naming/placement delta. That's the honest truth of the spec's "relocates, not closes"; if you expected F5 to *prove* more than AN3, it does not.
