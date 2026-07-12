@@ -58,12 +58,13 @@ the same shape:
 - [`full-loop.md`](full-loop.md) — the headline observe→command→observe loop 🐳
 - [`composable-conformance.md`](composable-conformance.md) — ONE ConformancePolicy at design-time AND runtime 🐳
 - [`anchored-activation.md`](anchored-activation.md) — four-eyes head + external anchor (T7), AN1–AN7
+- [`multisite-federation.md`](multisite-federation.md) — two per-site brokers under one federated authority (F1–F6) 🐳
 
-> **command-authz needs bifrost PR #7.** `run-command-authz-gate` was silently broken on `main` since
-> `a98e3cf` migrated value ranges out of `policy.json` into the governed conformance model (the shipped
-> policy became type-only, but `PolicyGate` lint-3 still demanded `min`/`max`). **PR #7**
-> (`fix/policy-lint-stale-range-constraint`) fixes lint-3 — check it out (or wait for merge) before
-> running that one gate. All other gates reproduce on plain `main`.
+> **command-authz — fixed on `main`.** `run-command-authz-gate` was briefly broken after `a98e3cf`
+> migrated value ranges out of `policy.json` into the governed conformance model (the shipped policy
+> became type-only, but `PolicyGate` lint-3 still demanded `min`/`max`). bifrost **PR #7**
+> (`fix/policy-lint-stale-range-constraint`) fixed lint-3 and **is now merged** — all gates reproduce on
+> plain `main`.
 
 ---
 
@@ -98,7 +99,7 @@ bash scripts/run-yggdrasil-full-loop-gate.sh
 | Bill | Gate | 🐳 | Proves | Evidence |
 |---|---|:--:|---|---|
 | ① data definition | `run-schema-gate.sh` |  | UDT schema compat: compatible proposal → exit 0, breaking → exit 1 | [log](outputs/run-schema-gate.log) |
-| ② command authorization | `run-command-authz-gate.sh` (needs PR #7) |  | deny-by-default policy accepted, `default:"allow"` rejected (lint-1) | [log](outputs/run-command-authz-gate.log) |
+| ② command authorization | `run-command-authz-gate.sh` |  | deny-by-default policy accepted, `default:"allow"` rejected (lint-1) | [log](outputs/run-command-authz-gate.log) |
 | ② command authz (runtime) | `run-ncmd-runtime-gate.sh` | 🐳 | Heimdall re-authorizes NCMD at the edge, deny-by-default | [log](outputs/run-ncmd-runtime-gate.log) |
 | ③ data lineage | `run-provenance-gate.sh` |  | git-anchored SHA-256 manifest: verify accept, tamper → reject | [log](outputs/run-provenance-gate.log) |
 
@@ -214,7 +215,7 @@ The metrics are `{Rpm=1500.0, Running=true, Temperature=65.4}`; `Spb40SizeTest` 
 |---|---|:--:|---|
 | 1 | full-loop (headline) | 🐳 | ✅ PASS — 1535 → (auth NCMD 1500) → 1500 · rogue + above-max DENY |
 | 2 | schema ① |  | ✅ PASS |
-| 3 | command-authz ② (PR #7) |  | ✅ PASS |
+| 3 | command-authz ② |  | ✅ PASS |
 | 4 | ncmd-runtime ② | 🐳 | ✅ PASS |
 | 5 | provenance ③ |  | ✅ PASS |
 | 6 | spec conformance |  | ✅ PASS |
@@ -228,6 +229,10 @@ The metrics are `{Rpm=1500.0, Running=true, Temperature=65.4}`; `Spb40SizeTest` 
 | 14 | spine | 🐳 | ✅ PASS |
 | 15 | measurement: loss ledger (OpcUaUdtBridgeDemo) | 🐳 | ✅ reproduced live — `8 clean / 1 side-channel / 0 type-identity` |
 | 16 | measurement: NBIRTH size (Spb40Demo) | 🐳 | ✅ reproduced live — `fat 328B vs thin 162B → 166B saved` |
+| 17 | multi-site federation (F1–F6) | 🐳 | ✅ PASS — F1/F5/F6 always; F2/F3/F4 under Docker (two per-site brokers + sims + edges) |
 
-Honest scope (unchanged from the product's own README): single broker / edge / instance / localhost;
-the sim's transfer is instant setpoint = PV (a governance loop, not process physics).
+Honest scope: most gates run a single broker / edge / instance / localhost; the sim's transfer is instant
+setpoint = PV (a governance loop, not process physics). The multi-site federation gate (#17) does run **two**
+per-site brokers + sims + edges, but still on one machine — it proves the federation *governance* mechanics
+(per-site autonomy, propagation, local-first, the enterprise anchor witness), **not** HA / aggregate load /
+a real WAN, and its F5 anchor relocation is topological, not cryptographic (same honest residual as T7).
