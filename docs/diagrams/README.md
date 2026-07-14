@@ -8,7 +8,8 @@ Style: "Light / GitHub-native". Spec: `../superpowers/specs/2026-06-17-portfolio
 | File | Source | Generated? | Shown in |
 |------|--------|-----------|----------|
 | `svg/governance-lifecycle.svg` | itself (hand-authored) | no | hero; README "The one-line idea" |
-| `svg/system-architecture.svg` | itself (hand-authored) | no | README "Architecture" |
+| `svg/system-architecture.svg` | itself (hand-authored) | no | README "Architecture" (English) |
+| `svg/system-architecture.ko.svg` | itself (hand-authored) | no | blog/slides (Korean variant of the above) |
 | `svg/seq-schema-data-separation.svg` | itself (hand-authored) | no | ADR-0008 |
 | `svg/seq-ncmd-authorization.svg` | itself (hand-authored) | no | ADR-0011 |
 | `svg/ot-it-dataflow.svg` | itself (hand-authored) | no | README "OT→IT data flow" |
