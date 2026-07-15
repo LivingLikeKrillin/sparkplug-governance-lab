@@ -40,7 +40,7 @@ flowchart LR
 
 ## Architecture
 
-![System architecture: OT/Edge to HiveMQ to IT consumers, fed by a policy-as-code governance plane (SchemaGate, UDT registry, command policy)](docs/diagrams/svg/system-architecture.svg)
+![The PoC stage: the full observe → command → observe loop running under external Yggdrasil/Bifrost governance that the Heimdall runtime edge consumes (verify-then-trust) — commands re-authorized and bound at the edge, rogue denied fail-closed, observations fed back to the UNS](docs/diagrams/svg/system-architecture.svg)
 
 ## Modules
 
