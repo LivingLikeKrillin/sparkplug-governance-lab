@@ -4,7 +4,7 @@
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](LICENSE)
 ![Java](https://img.shields.io/badge/Java-17-orange?logo=openjdk&logoColor=white)
 ![Sparkplug B](https://img.shields.io/badge/Sparkplug_B-Eclipse_Tahu_1.0.14-brightgreen)
-![Tests](https://img.shields.io/badge/tests-142-brightgreen)
+![Tests](https://img.shields.io/badge/tests-99-brightgreen)
 ![Status: proof of concept](https://img.shields.io/badge/status-proof--of--concept-orange)
 
 A hands-on lab for **Sparkplug B / Unified Namespace (UNS) governance**: both ends of a Sparkplug session (Edge Node + Host Application) implemented from primitives on **Eclipse Tahu 1.0.14 + Eclipse Paho + HiveMQ CE**, then used to characterize real governance problems — schema evolution, command authorization, state-on-connect, OT→IT bridging — and to **enforce** answers to them as working code.
@@ -44,7 +44,7 @@ flowchart LR
 
 ## Modules
 
-All pure-logic modules are TDD'd (142 tests, `mvn test`, no broker needed); MQTT/Kafka/OPC UA shells are exercised by live demos against real services.
+All pure-logic modules are TDD'd (99 tests, `mvn test`, no broker needed); MQTT/Kafka/OPC UA shells are exercised by live demos against real services.
 
 | Module | What it does | ADR |
 |--------|--------------|-----|
@@ -105,7 +105,7 @@ Requirements: Java 17+, Maven 3.9+, Docker.
 
 ```bash
 docker compose up -d        # HiveMQ CE on :1883 (allow-all, local dev) + Kafka KRaft on :9092
-mvn test                    # 142 pure-logic tests, no broker needed
+mvn test                    # 99 pure-logic tests, no broker needed
 ```
 
 Demos (run from the repo root — the file registry is resolved relative to the working directory):
