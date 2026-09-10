@@ -48,11 +48,11 @@ All pure-logic modules are TDD'd (99 tests, `mvn test`, no broker needed); MQTT/
 
 | Module | What it does | ADR |
 |--------|--------------|-----|
-| `schema` | **Data-contract registry + compatibility gate.** Disk-backed UDT schema registry with SemVer'd definitions and a fail-closed CLI gate (`SchemaGate`) that rejects breaking changes pre-deployment (FORWARD/BACKWARD/FULL/NONE, Confluent vocabulary). | [0007](docs/adr/ADR-0007-schema-registry-gate.en.md) |
+| `schema` | **Data-contract registry.** Disk-backed UDT schema registry with SemVer'd definitions and the compatibility vocabulary (`CompatMode` FORWARD/BACKWARD/FULL/NONE, `Verdict`, `Violation`). **The fail-closed gate itself (`SchemaGate`, `CompatibilityChecker`) was extracted to [bifrost](https://github.com/yggdrasil-iiot/bifrost) in `0b9b1ae` and is no longer in this repo.** | [0007](docs/adr/ADR-0007-schema-registry-gate.en.md) |
 | `spb40` | **Schema↔data separation prototype** (#608 concept): full UDT definition published once to a retained `DEFINITION` topic; data carries a thin `schemaRef` + alias-only metrics. Member `engUnit` (#607) and per-metric `quality` (#603) as PropertySets. Measured NBIRTH: **328 B inline vs 162 B thin**. Consumer-side learning is idempotent (retained + live duplicate delivery handled; same-ref redefinition flagged as an immutability violation). | [0008](docs/adr/ADR-0008-schema-data-separation.en.md) |
 | `kafka` | **Stateful UNS→Kafka bridge.** Restores alias→name from NBIRTH state, accumulates last-known values, maps ISA-95 paths to Kafka topics. Key insight: Sparkplug RBE last-known-value is isomorphic to Kafka **log compaction** (key = metric identity). Contract violations route to a DLQ instead of polluting the main topic. | [0009](docs/adr/ADR-0009-uns-to-kafka-stateful-bridge.en.md) |
 | `opcua` | **OPC UA information model → Sparkplug UDT mapping** via Eclipse Milo browse: subtype inheritance + `HasInterface` multiple-inheritance flattening with provenance labels, and an explicit **loss ledger** (the mapping is *not* lossless — DateTime precision, StatusCode width, type identity) with side-channel properties (`ua_ticks`, `ua_statuscode`) preserving the originals verbatim. | [0010](docs/adr/ADR-0010-opcua-udt-mapping.en.md) |
-| `acl` | **NCMD command authorization** (relates to [eclipse-sparkplug/sparkplug#600](https://github.com/eclipse-sparkplug/sparkplug/issues/600)). Key observation: the NCMD topic carries no command name — command identity lives in the payload metric, so broker topic ACLs can only enforce *node-level reachability*; per-command / per-value authorization needs payload visibility. One deny-by-default policy file projects to an edge-side authorizer (fail-closed), a broker ACL artifact, and a CI lint gate. Also available as an **OPA/Rego policy evaluated in-JVM (WebAssembly via Chicory, context-conditional)** for decisions the request-only authorizer can't express, with a CI drift-guard against the committed wasm. | [0011](docs/adr/ADR-0011-command-authorization.en.md) |
+| `acl` *(moved)* | **NCMD command authorization** (relates to [eclipse-sparkplug/sparkplug#600](https://github.com/eclipse-sparkplug/sparkplug/issues/600)). Key observation: the NCMD topic carries no command name — command identity lives in the payload metric, so broker topic ACLs can only enforce *node-level reachability*; per-command / per-value authorization needs payload visibility. One deny-by-default policy file projects to an edge-side authorizer (fail-closed), a broker ACL artifact, and a CI lint gate. Also available as an **OPA/Rego policy evaluated in-JVM (WebAssembly via Chicory, context-conditional)** for decisions the request-only authorizer can't express, with a CI drift-guard against the committed wasm. **Extracted to [bifrost](https://github.com/yggdrasil-iiot/bifrost) in `0b9b1ae`; this repo no longer contains `acl/`.** | [0011](docs/adr/ADR-0011-command-authorization.en.md) |
 | `drift` | **Runtime schema-drift detection** (detect-only): passively compares observed NBIRTH UDT definitions against the registry's source of truth (UNREGISTERED / VERSION_DRIFT / member drift), tracks staleness, and emits governance health metrics — closing the loop that the pre-deployment gate (`schema`) opens. | [0012](docs/adr/ADR-0012-runtime-drift-detection.en.md) |
 
 Plus session-fundamentals demos built first to characterize the protocol: birth/death + bdSeq/seq + rebirth (`SessionDemo`), primary-host store-and-forward (`StateStoreForwardDemo`), late-joiner A/B with a Sparkplug-aware broker (`LateJoinerExperiment`), UDT silent-replacement gap (`UdtDemo`), protobuf→JSON bridge (`JsonBridgeDemo`), stolen-session storms (`StolenSessionDemo`).
@@ -75,29 +75,19 @@ flowchart LR
     SC -.->|"carried in birth"| DEF
 ```
 
-## Portfolio integration — the governed command path
+## Portfolio integration — the governed command path *(extracted)*
 
-The `acl` module argues that per-command, per-value NCMD authorization has to happen where the
-payload is visible, not at the broker topic. The `bridge` package puts that thesis on a **live
-command path**: a companion durable-transaction engine (**koshei**) originates governed field
-commands and publishes them as **Sparkplug NCMD**, and this lab supplies the **edge bridge** that
-receives, authorizes, and applies them.
-
-| Artifact | Role |
-|----------|------|
-| `bridge/NcmdOpcUaBridge` | Subscribes to `spBv1.0/{group}/NCMD/{edge}`, decodes the single command metric, and **independently authorizes it deny-by-default** through the existing `acl` `CommandAuthorizer` + `CommandPolicy` — a second authorization at the D3 edge, decided *without* trusting the engine's upstream authorization. |
-| `bridge/OpcUaApplier` | On allow, applies the command to OPC-UA via Eclipse Milo (write + confirm-by-read; rising-edge confirm for trigger / `call` commands), then the bridge publishes a correlated Sparkplug **NDATA** response the engine matches by `cmdId`. |
-| `registry/koshei-line1-policy.json` | The bridge's own deny-by-default edge policy — EURange-bounded `Double` rules per setpoint node + a trigger-only rule for the activate node — kept separate from `command-policy.json` so this command path is governed by its own file. |
-| `bridge/NcmdOpcUaBridgeMain` | Runnable wiring (broker + OPC-UA endpoint + edge policy); driven end-to-end by the companion engine's cross-repo integration gate. |
-
-**Why it matters (defense-in-depth).** The command ends up authorized in **two independent places** —
-the engine's own policy upstream, *and* this bridge's edge `CommandAuthorizer`. A rogue NCMD that
-bypasses the engine is still refused at the edge (exercised by `RogueNcmd` in the bridge tests). It
-is the `acl` module's core claim — payload-level authorization the broker cannot do — proven inside
-a real actuation loop rather than a standalone demo. Scope stays demo-grade: single HiveMQ CE broker,
-a shared synthetic OPC-UA sim, single node. The bridge is the **D3 edge** component of a larger
-composable OT/IT architecture and deliberately owns *only* the edge apply + authorization, never the
-transaction itself.
+> [!NOTE]
+> This lab originally carried the live governed command path: a `bridge` package whose
+> `NcmdOpcUaBridge` subscribed to `spBv1.0/{group}/NCMD/{edge}`, re-authorized each command
+> deny-by-default at the edge through `acl`, and applied it to OPC-UA (write + confirm-by-read).
+> Its thesis — **per-command, per-value authorization has to happen where the payload is visible,
+> not at the broker topic** — is what became the runtime write-boundary daemon (Heimdall) in
+> [bifrost](https://github.com/yggdrasil-iiot/bifrost).
+>
+> `0b9b1ae` (2026-07-08) removed `acl/` and `bridge/` from this repo. The upstream originator in
+> that old wiring was **koshei**, which has since been retired. Read this section's history in
+> `git log`, [ADR-0011](docs/adr/ADR-0011-command-authorization.en.md), and bifrost.
 
 ## Running
 
@@ -112,10 +102,8 @@ Demos (run from the repo root — the file registry is resolved relative to the 
 
 ```bash
 mvn -q exec:java -Dexec.mainClass=dev.krillin.sparkplug.SessionDemo        # Sparkplug session end-to-end
-mvn -q exec:java -Dexec.mainClass=dev.krillin.sparkplug.SchemaGateDemo     # registry + compat gate (no broker)
 mvn -q exec:java -Dexec.mainClass=dev.krillin.sparkplug.Spb40Demo          # #608/#607/#603 prototype
 mvn -q exec:java -Dexec.mainClass=dev.krillin.sparkplug.UnsToKafkaDemo     # stateful UNS→Kafka bridge
-mvn -q exec:java -Dexec.mainClass=dev.krillin.sparkplug.CommandAclDemo     # NCMD authorization (incl. the case a broker ACL cannot block)
 mvn -q exec:java -Dexec.mainClass=dev.krillin.sparkplug.DriftMonitorDemo   # runtime drift detection
 ```
 
