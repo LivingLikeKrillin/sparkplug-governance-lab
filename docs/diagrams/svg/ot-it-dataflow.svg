@@ -1,5 +1,5 @@
-<svg viewBox="0 0 1460 338" width="1460" height="338" xmlns="http://www.w3.org/2000/svg" role="img" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif">
-  <title>OT to IT — OPC UA information model to Kafka, with loss ledger + side-channel</title>
+<svg viewBox="0 0 1460 338" width="1460" height="338" xmlns="http://www.w3.org/2000/svg" role="img" font-family="Malgun Gothic,Apple SD Gothic Neo,Noto Sans KR,Segoe UI,-apple-system,Helvetica,Arial,sans-serif">
+  <title>OT에서 IT로 — OPC UA 정보 모델의 Kafka 스트리밍 파이프라인 (손실 원장 및 부가 채널)</title>
   <defs>
     <marker id="ag" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#57606a"/></marker>
   </defs>
@@ -7,60 +7,58 @@
   <rect x="8" y="8" width="1444" height="322" rx="14" fill="#ffffff" stroke="#d0d7de"/>
 
   <!-- title -->
-  <text x="30" y="42" font-size="16" font-weight="600" fill="#1f2328">OT to IT — OPC UA information model to Kafka, with loss ledger + side-channel</text>
-  <text x="30" y="62" font-size="12" fill="#57606a">lossless pipeline: lossy originals preserved verbatim in a side-channel that rejoins at the definition</text>
+  <text x="30" y="42" font-size="16" font-weight="600" fill="#1f2328">OT에서 IT로 — OPC UA 정보 모델의 Kafka 스트리밍 파이프라인</text>
+  <text x="30" y="62" font-size="12" fill="#57606a">무손실 보존: 변환 손실 원본을 부가 채널(Side-channel)로 무손실 전달하여 스키마 정의와 재결합</text>
 
   <!-- ===== edges ===== -->
   <g fill="none" stroke-width="1.6">
     <!-- data flow grey chain -->
-    <polyline points="188,139 243,139" stroke="#57606a" marker-end="url(#ag)"/>
-    <polyline points="383,139 438,139" stroke="#57606a" marker-end="url(#ag)"/>
-    <polyline points="603,139 658,139" stroke="#57606a" marker-end="url(#ag)"/>
-    <polyline points="828,139 883,139" stroke="#57606a" marker-end="url(#ag)"/>
-    <polyline points="1033,139 1088,139" stroke="#57606a" marker-end="url(#ag)"/>
-    <polyline points="1246,139 1301,139" stroke="#57606a" marker-end="url(#ag)"/>
+    <polyline points="198,139 248,139" stroke="#57606a" marker-end="url(#ag)"/>
+    <polyline points="393,139 443,139" stroke="#57606a" marker-end="url(#ag)"/>
+    <polyline points="613,139 663,139" stroke="#57606a" marker-end="url(#ag)"/>
+    <polyline points="843,139 893,139" stroke="#57606a" marker-end="url(#ag)"/>
+    <polyline points="1043,139 1093,139" stroke="#57606a" marker-end="url(#ag)"/>
+    <polyline points="1251,139 1301,139" stroke="#57606a" marker-end="url(#ag)"/>
     <!-- side-channel loop (dashed = feedback) -->
-    <polyline points="560,168 560,250" stroke="#57606a" stroke-dasharray="5 3" marker-end="url(#ag)"/>
-    <polyline points="700,250 700,168" stroke="#57606a" stroke-dasharray="5 3" marker-end="url(#ag)"/>
+    <polyline points="570,168 570,250" stroke="#57606a" stroke-dasharray="5 3" marker-end="url(#ag)"/>
+    <polyline points="710,250 710,168" stroke="#57606a" stroke-dasharray="5 3" marker-end="url(#ag)"/>
   </g>
 
   <!-- ===== edge labels (no background chips) ===== -->
   <g font-size="11" fill="#57606a">
-    <text x="448" y="214">verbatim originals</text>
-    <text x="712" y="214">carried in birth</text>
+    <text x="430" y="214">원본 데이터 무손실 보존</text>
+    <text x="720" y="214">Birth 메시지로 연계 전송</text>
   </g>
 
   <!-- ===== pipeline nodes ===== -->
   <g font-size="12.5" text-anchor="middle" fill="#1f2328">
-    <rect x="30" y="110" width="158" height="58" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
-    <text x="109" y="133">OPC UA server</text>
-    <text x="109" y="151" font-size="11" fill="#57606a">information model</text>
+    <rect x="30" y="110" width="168" height="58" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+    <text x="114" y="133" font-weight="600">OPC UA 서버</text>
+    <text x="114" y="151" font-size="11" fill="#57606a">정보 모델 (Address Space)</text>
 
-    <rect x="243" y="110" width="140" height="58" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
-    <text x="313" y="143">Milo browse</text>
+    <rect x="248" y="110" width="145" height="58" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+    <text x="320" y="133" font-weight="600">Milo 탐색</text>
+    <text x="320" y="151" font-size="10" fill="#57606a">서브타입·인터페이스 탐색</text>
 
-    <rect x="438" y="110" width="165" height="58" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
-    <text x="520" y="133">OpcUaTypeMapper</text>
-    <text x="520" y="151" font-size="11" fill="#57606a">+ LossLedger</text>
+    <rect x="443" y="110" width="170" height="58" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+    <text x="528" y="133" font-weight="600">OpcUaTypeMapper</text>
+    <text x="528" y="151" font-size="11" fill="#57606a">+ 손실 원장 (LossLedger)</text>
 
-    <rect x="658" y="110" width="170" height="58" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
-    <text x="743" y="133">retained DEFINITION</text>
-    <text x="743" y="151" font-size="11" fill="#57606a">+ thin NBIRTH/NDATA</text>
+    <rect x="663" y="110" width="180" height="58" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+    <text x="753" y="133" font-weight="600">영속 DEFINITION</text>
+    <text x="753" y="151" font-size="11" fill="#57606a">+ 경량 NBIRTH / NDATA</text>
 
-    <rect x="883" y="110" width="150" height="58" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
-    <text x="958" y="143">Sparkplug Edge</text>
+    <rect x="893" y="110" width="150" height="58" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+    <text x="968" y="133" font-weight="600">Sparkplug 엣지</text>
+    <text x="968" y="151" font-size="11" fill="#57606a">EoN 노드</text>
 
-    <rect x="1088" y="110" width="158" height="58" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
-    <text x="1167" y="143">HiveMQ (MQTT)</text>
+    <rect x="1093" y="110" width="158" height="58" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+    <text x="1172" y="133" font-weight="600">HiveMQ 브로커</text>
+    <text x="1172" y="151" font-size="11" fill="#57606a">MQTT pub / sub</text>
 
     <path d="M1301,113 a65,9 0 0 1 130,0 l0,46 a65,9 0 0 1 -130,0 Z" fill="#f6f8fa" stroke="#d0d7de"/>
     <path d="M1301,113 a65,9 0 0 0 130,0" fill="none" stroke="#d0d7de"/>
     <text x="1366" y="138" font-weight="600">Kafka</text>
-    <text x="1366" y="155" font-size="11" fill="#57606a">log compaction</text>
-
-    <!-- side-channel (protagonist) -->
-    <rect x="545" y="250" width="185" height="58" rx="6" fill="#eaf3ea" stroke="#1a7f37"/>
-    <text x="637" y="273" font-weight="600">side-channel</text>
-    <text x="637" y="291" font-size="11" fill="#57606a">ua_ticks, ua_statuscode</text>
+    <text x="1366" y="155" font-size="11" fill="#57606a">로그 압축 (Compaction)</text>
   </g>
 </svg>

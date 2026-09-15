@@ -1,21 +1,21 @@
-<svg viewBox="0 0 520 320" width="520" height="320" xmlns="http://www.w3.org/2000/svg" role="img" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif">
-  <title>NBIRTH payload size: 328 B inline vs 162 B thin (schemaRef), ~166 B saved per birth</title>
+<svg viewBox="0 0 520 320" width="520" height="320" xmlns="http://www.w3.org/2000/svg" role="img" font-family="Malgun Gothic,Apple SD Gothic Neo,Noto Sans KR,Segoe UI,-apple-system,Helvetica,Arial,sans-serif">
+  <title>NBIRTH 페이로드 크기: 인라인 328 B vs 경량 162 B (schemaRef), 회당 약 166 B (50%) 절감</title>
   <rect x="8" y="8" width="504" height="304" rx="12" fill="#ffffff" stroke="#d0d7de"/>
-  <text x="32" y="44" font-size="16" font-weight="600" fill="#1f2328">NBIRTH payload size — schema/data separation</text>
-  <text x="32" y="64" font-size="12" fill="#57606a">measured per birth (ADR-0008)</text>
+  <text x="32" y="44" font-size="16" font-weight="600" fill="#1f2328">NBIRTH 페이로드 크기 — 스키마/데이터 분리 효과</text>
+  <text x="32" y="64" font-size="12" fill="#57606a">Birth 1회당 전송 바이트 실측치 비교 (ADR-0008)</text>
   <!-- baseline -->
   <line x1="84" y1="270" x2="434" y2="270" stroke="#d0d7de"/>
   <!-- inline bar: 328 B -->
   <rect x="124" y="120" width="90" height="150" rx="3" fill="#f6f8fa" stroke="#d0d7de"/>
   <text x="169" y="110" font-size="14" font-weight="600" text-anchor="middle" fill="#1f2328">328 B</text>
-  <text x="169" y="290" font-size="12" text-anchor="middle" fill="#57606a">inline (full UDT)</text>
+  <text x="169" y="290" font-size="12" text-anchor="middle" fill="#57606a">인라인 (전체 UDT)</text>
   <!-- thin bar: 162 B -->
   <rect x="294" y="196" width="90" height="74" rx="3" fill="#ddf4ff" stroke="#0969da"/>
   <text x="339" y="186" font-size="14" font-weight="600" text-anchor="middle" fill="#0969da">162 B</text>
-  <text x="339" y="290" font-size="12" text-anchor="middle" fill="#57606a">thin (schemaRef)</text>
+  <text x="339" y="290" font-size="12" text-anchor="middle" fill="#57606a">경량 전송 (schemaRef)</text>
   <!-- saving bracket -->
   <line x1="214" y1="120" x2="384" y2="120" stroke="#1a7f37" stroke-dasharray="4 3"/>
   <line x1="384" y1="120" x2="384" y2="196" stroke="#1a7f37" stroke-dasharray="4 3"/>
   <text x="392" y="162" font-size="13" font-weight="600" fill="#1a7f37">-166 B</text>
-  <text x="392" y="180" font-size="11" fill="#1a7f37">~50% / birth</text>
+  <text x="392" y="180" font-size="11" fill="#1a7f37">회당 ~50% 절감</text>
 </svg>
