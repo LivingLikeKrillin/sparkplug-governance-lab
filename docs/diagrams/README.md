@@ -1,54 +1,25 @@
-# Diagrams
+# 다이어그램 자산 (Diagram Assets)
 
-Version-controlled diagram assets for portfolio surfaces (README, blog, slides, PDF).
-Style: "Light / GitHub-native". Spec: `../superpowers/specs/2026-06-17-portfolio-visuals-design.md`.
+포트폴리오 표면(README, 기술 블로그, 발표 슬라이드, PDF 등)을 위해 버전 관리되는 다이어그램 시각 자산 목록입니다.  
+디자인 스타일: "Light / GitHub-native". 사양서: `../superpowers/specs/2026-06-17-portfolio-visuals-design.md`.
 
-## Assets
+## 자산 현황 (Assets)
 
-| File | Source | Generated? | Shown in |
-|------|--------|-----------|----------|
-| `svg/governance-lifecycle.svg` | itself (hand-authored) | no | hero; README "The one-line idea" |
-| `svg/system-architecture.svg` | itself (hand-authored) | no | README "Architecture" (English) |
-| `svg/system-architecture.ko.svg` | itself (hand-authored) | no | blog/slides (Korean variant of the above) |
-| `svg/seq-schema-data-separation.svg` | itself (hand-authored) | no | ADR-0008 |
-| `svg/seq-ncmd-authorization.svg` | itself (hand-authored) | no | ADR-0011 |
-| `svg/ot-it-dataflow.svg` | itself (hand-authored) | no | README "OT→IT data flow" |
-| `svg/nbirth-size.svg` | itself (hand-authored) | no | blog/slides |
-| `svg/loss-ledger.svg` | itself (hand-authored) | no | blog/slides |
+| 파일 경로 | 원천 소스 | 자동 렌더링 여부 | 표시 위치 |
+|-----------|-----------|------------------|-----------|
+| `svg/governance-lifecycle.svg` | 파일 자체 (수작업 제작) | 아니오 | Hero 섹션; README "핵심 개념 (The one-line idea)" |
+| `svg/system-architecture.svg` | 파일 자체 (수작업 제작) | 아니오 | README "아키텍처 (Architecture)" |
+| `svg/system-architecture.ko.svg` | 파일 자체 (수작업 제작) | 아니오 | 발표 슬라이드 / 기술 블로그 (한국어 아키텍처 다이어그램) |
+| `svg/seq-schema-data-separation.svg` | 파일 자체 (수작업 제작) | 아니오 | ADR-0008 |
+| `svg/seq-ncmd-authorization.svg` | 파일 자체 (수작업 제작) | 아니오 | ADR-0011 |
+| `svg/ot-it-dataflow.svg` | 파일 자체 (수작업 제작) | 아니오 | README "OT→IT 데이터 흐름" |
+| `svg/nbirth-size.svg` | 파일 자체 (수작업 제작) | 아니오 | 발표 슬라이드 / 기술 블로그 |
+| `svg/loss-ledger.svg` | 파일 자체 (수작업 제작) | 아니오 | 발표 슬라이드 / 기술 블로그 |
 
-## Re-rendering
+## 렌더링 및 캔버스 설계 원칙
 
-`powershell -NoProfile -File render.ps1` (Windows) or `bash render.sh` (POSIX). Renders every `src/*.mmd`
-to `svg/`. First run downloads a Puppeteer Chromium (cached). Docker fallback:
-see the comment block in `render.sh`. Hand-authored SVGs are never overwritten.
+본 저장소의 모든 다이어그램은 resvg 렌더링 호환성 및 다크 모드 가독성을 보장하기 위해 수작업 제작된 표준 SVG(House-dialect SVG)로 일원화되어 관리됩니다.
 
-The scripts are hardened to run from a path containing literal `[` `]` brackets
-(they `cd` into this dir and pass relative paths) — see the header comment in `render.sh`.
-
-Rendered SVGs use an **opaque white canvas** (`-b "#ffffff"`), not a transparent one,
-so each diagram reads as a clean card on GitHub dark mode (a transparent canvas would
-put dark node text on a dark page). The hand-authored charts use the same opaque card.
-
-## Source-of-truth & parity
-
-`src/*.mmd` is canonical. The following README / ADR inline mermaid blocks are
-**mirrors** and MUST be kept identical to their `.mmd` source (modulo title front-matter) when either changes:
-
-- `src/governance-lifecycle.mmd` <-> README "The one-line idea"
-- `src/ot-it-dataflow.mmd` <-> README "OT→IT data flow"
-- `src/seq-schema-data-separation.mmd` <-> ADR-0008 (English + Korean)
-- `src/seq-ncmd-authorization.mmd` <-> ADR-0011 (English + Korean)
-
-This discipline is **enforced**, not just documented — run:
-
-```
-python check-parity.py
-```
-
-It checks that each `.mmd` body (front-matter stripped) appears verbatim as a
-```mermaid``` block in every mirror, and exits non-zero on any drift (stdlib
-only, suitable for a CI step or pre-commit hook).
-
-`system-architecture.svg` is **not** in this list: it is a hand-authored SVG
-(no `.mmd`, embedded in the README as an image), so there is no mermaid mirror
-to keep in sync.
+- **불투명 흰색 캔버스(`-b "#ffffff"`)**: 투명 캔버스를 사용할 경우 GitHub 다크 모드에서 어두운 배경 위에 어두운 노드 텍스트가 겹쳐 가독성이 저하되므로, 모든 다이어그램은 깨끗한 카드 형태의 불투명 흰색 배경을 사용합니다.
+- **배경 칩(Chip) 배제 및 직교 라우팅**: 선(edge) 위에 텍스트 배경 칩을 덮지 않고, 텍스트 레이블을 선 옆에 배치하여 화살표 및 연결선의 가시성을 100% 확보합니다.
+- **레이아웃 결함 0건 기계적 검증**: 캔버스 오버플로우(Canvas Overflow), 텍스트 충돌(Text Collision), 박스 경계 초과(Box Overflow)를 방지하기 위해 폰트 메트릭 기반의 검증 스크립트로 레이아웃 무결성을 보장합니다.
