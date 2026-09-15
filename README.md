@@ -7,15 +7,26 @@
 ![Tests](https://img.shields.io/badge/tests-99-brightgreen)
 ![Status: proof of concept](https://img.shields.io/badge/status-proof--of--concept-orange)
 
-**Sparkplug B 및 통합 네임스페이스(Unified Namespace, UNS) 거버넌스**를 실증하기 위한 엔지니어링 랩(Lab)입니다. **Eclipse Tahu 1.0.14 + Eclipse Paho + HiveMQ CE** 기반 원시 프리미티브로부터 Sparkplug 세션의 양단(엣지 노드 및 호스트 애플리케이션)을 직접 구현하였으며, 스키마 진화, 제어 명령 인가, 지연 접속 시 상태 동기화(State-on-Connect), OT→IT 데이터 브리징 등 산업 현장의 핵심 거버넌스 난제를 분석하고 이를 **동작 가능한 코드로 강제(Enforce)**합니다.
+산업 IoT(IIoT) 및 스마트 제조 환경에서 **Sparkplug B 프로토콜과 통합 네임스페이스(Unified Namespace, UNS)**를 연계할 때 발생하는 아키텍처 거버넌스 공백을 규명하고, 이를 코드로 강제(Enforce)하기 위해 구축된 **실증 엔지니어링 랩(Reference Architecture Lab)**입니다.
 
-**현황 및 상태:** 개인 개념 실증(PoC) 랩. 단일 브로커, 단일 노드 규모, JSON 파일 기반 레지스트리(Avro/Confluent 미사용). 본 프로젝트는 기술적 한계를 투명하게 공개합니다. 각 모듈의 아키텍처 결정 레코드(ADR)에는 명시적인 '한계 및 제약 사항' 섹션이 포함되어 있으며, 매핑 간 손실 정보는 은폐되지 않고 1급 결과물(손실 원장)로 표면화됩니다.
+Eclipse Tahu 1.0.14, Eclipse Paho, HiveMQ CE 기반의 순수 프리미티브를 바탕으로 엣지 노드(EoN)와 호스트 애플리케이션 양단을 직접 구현하였으며, 스키마 진화, 2계층 제어 명령 인가, 지연 접속 시 상태 복원(State-on-Connect), 이기종(OPC UA / Kafka) 데이터 파이프라인 무손실 연계 등 현업의 핵심 난제를 분석하고 해법을 제시합니다.
 
-> ⚠️ `spb40` 모듈은 Sparkplug 3.0 프리미티브(Template/PropertySet)를 기반으로 Sparkplug 4.0 논의 주제([eclipse-sparkplug/sparkplug#608](https://github.com/eclipse-sparkplug/sparkplug/issues/608), [#607](https://github.com/eclipse-sparkplug/sparkplug/issues/607), [#603](https://github.com/eclipse-sparkplug/sparkplug/issues/603))에 대한 **개념적 프로토타입**을 실증합니다. Sparkplug 4.0은 공식 릴리스 전이며 와이어 포맷이 확정되지 않았으므로, 공식 사양 구현체가 아닙니다.
+---
 
-## 핵심 개념 (The one-line idea)
+## 1. 아키텍처 철학 및 핵심 원칙 (Core Architectural Principles)
 
-배포 전 검증 게이트가 거버넌스 루프를 열고, 런타임 드리프트 감지가 이를 닫아 완성합니다.
+본 랩은 현장의 설비 제어망(OT)과 엔터프라이즈 데이터망(IT)이 결합할 때 데이터 무결성과 시스템 안정성을 보장하기 위해 다음 4대 원칙을 시스템 전반의 불변식으로 강제합니다:
+
+1. **폐쇄형 실패 (Fail-Closed)**: 스키마 불일치, 알 수 없는 메트릭, 인가 정책 누락, 허용 범위 초과 등 정의되지 않은 모든 예외 상황에서는 실행을 즉각 차단하고 안전 상태를 유지합니다.
+2. **기본 거부 (Deny-by-Default)**: 명시적 화이트리스트에 등록되지 않은 모든 제어 명령(NCMD)과 데이터 등록 요청은 기본적으로 거부됩니다.
+3. **사전 검증 후 신뢰 (Verify-Then-Trust)**: 엣지 제어 노드는 상위 브로커나 외부 시스템을 맹신하지 않고, 자신에게 도달한 제어 명령의 유효성과 파라미터 제약조건을 엣지 레벨에서 독립적으로 재인가합니다.
+4. **단일 진실 원천 (Single Source of Truth, SSOT)**: 런타임에 회선(Wire)을 통해 유통되는 페이로드는 현상에 불과하며, 데이터 계약과 정책의 유효성은 레지스트리의 버전화된 정의를 기준으로 엄격히 판정합니다.
+
+---
+
+## 2. 핵심 거버넌스 라이프사이클 (Governance Lifecycle)
+
+> **"배포 전 검증 게이트(Pre-deploy Gate)가 거버넌스 루프를 열고, 런타임 드리프트 감지(Runtime Drift Detection)가 이를 닫아 완성합니다."**
 
 <!-- mirror of docs/diagrams/src/governance-lifecycle.mmd — keep in sync (see docs/diagrams/README.md) -->
 ```mermaid
@@ -33,26 +44,36 @@ flowchart LR
     class GATE,REG gov;
 ```
 
-## 시스템 아키텍처 (Architecture)
+- **사전 배포 단계 (Shift-Left)**: 엣지 노드가 배포되기 전, CI 게이트(`SchemaGate`)가 제안된 UDT 정의의 하위 호환성을 검증하여 파괴적 변경(Breaking Change)의 유입을 원천 차단합니다.
+- **런타임 관측 단계 (Observability)**: 런타임 모니터(`DriftMonitor`)가 현장에서 실제로 유통되는 NBIRTH 페이로드를 정본 레지스트리와 비교하여 미등록 타입, 버전 불일치, 멤버 드리프트를 상시 감지하고 피드백 루프를 형성합니다.
+
+---
+
+## 3. 전체 시스템 아키텍처 (System Architecture)
 
 ![Sparkplug B / UNS 거버넌스 실증 아키텍처 — Bifrost 정책 기반 엣지 제어 명령 재인가 및 관측 데이터 피드백 루프](docs/diagrams/svg/system-architecture.svg)
 
-## 모듈 구성 (Modules)
+전체 시스템은 세 가지 상호작용 평면으로 구성됩니다:
+- **거버넌스 권위 평면 (Governance Authority Plane)**: 모델 설계 도구(Mímir)에서 제안된 정의를 검증하고, UDT 스키마 및 인가 정책의 활성 버전을 중앙 관리하는 정본 권위체(Bifrost)입니다.
+- **엣지 실행 평면 (Runtime Edge Execution Plane)**: HiveMQ 브로커를 통해 전달된 NCMD 명령을 엣지 인가 엔진(Heimdall)이 직접 검사하여, 정책에 부합하는 제어만 현장 OPC UA 설비에 반영합니다.
+- **데이터 관측 및 엔터프라이즈 연계 평면 (Observation & IT Plane)**: 현장 계측 데이터(NDATA)를 수집하여 통합 네임스페이스(UNS) 및 Kafka로 실시간 스트리밍하며 제어 피드백 루프를 완결합니다.
 
-순수 로직 모듈 전체는 TDD(테스트 주도 개발)로 작성되었습니다 (99개 단위 테스트, `mvn test` 실행, 외부 브로커 불필요). MQTT/Kafka/OPC UA 외곽 쉘은 실제 서비스를 대상으로 한 라이브 데모를 통해 검증됩니다.
+---
 
-| 모듈 | 역할 및 수행 작업 | 연계 ADR |
-|------|-------------------|----------|
-| `schema` | **데이터 계약 레지스트리.** 파일 시스템 기반 UDT 스키마 레지스트리로 SemVer 규격 정의와 호환성 어휘(`CompatMode` FORWARD/BACKWARD/FULL/NONE, `Verdict`, `Violation`)를 제공합니다. **폐쇄형 실패 게이트 자체(`SchemaGate`, `CompatibilityChecker`)는 커밋 `0b9b1ae`에서 [bifrost](https://github.com/yggdrasil-iiot/bifrost)로 이관되어 본 저장소에서는 제외되었습니다.** | [0007](docs/adr/ADR-0007-schema-registry-gate.md) |
-| `spb40` | **스키마-데이터 분리 프로토타입** (#608 개념 실증): 완전한 UDT 정의는 영속(Retained) `DEFINITION` 토픽에 1회만 발행하고, 텔레메트리 데이터는 경량 `schemaRef`와 Alias 전용 메트릭만 운반합니다. 멤버 단위 `engUnit`(#607) 및 메트릭별 `quality`(#603) 속성을 PropertySet으로 구성합니다. 실측 NBIRTH 페이로드: **인라인 방식 328 B vs 경량 분리 방식 162 B (약 50% 절감)**. 소비자 측 스키마 학습은 멱등성을 보장합니다(영속 및 라이브 중복 수신 처리, 동일 ref에 대한 스키마 재정의 시 불변성 위반 감지). | [0008](docs/adr/ADR-0008-schema-data-separation.md) |
-| `kafka` | **상태 기반 UNS→Kafka 브리지.** NBIRTH 상태로부터 Alias→Name 매핑을 복원하고, 최신 관측값(LKV)을 누적하며, ISA-95 경로를 Kafka 토픽으로 변환합니다. 핵심 통찰: Sparkplug RBE의 최신값 유지는 Kafka의 **로그 압축(Log Compaction)**과 동형(Isomorphic) 관계를 형성합니다(Key = 메트릭 고유 식별자). 계약 위반 레코드는 메인 토픽 오염을 방지하기 위해 Dead Letter Queue(DLQ)로 격리 라우팅됩니다. | [0009](docs/adr/ADR-0009-uns-to-kafka-stateful-bridge.md) |
-| `opcua` | **OPC UA 정보 모델 → Sparkplug UDT 매핑.** Eclipse Milo 탐색(browse) 기반: 서브타입 상속 및 `HasInterface` 다중 상속을 출처 레이블과 함께 단일 계층으로 평탄화(Flattening)하며, 명시적 **손실 원장(Loss Ledger)**을 제공합니다 (본 매핑은 DateTime 정밀도, StatusCode 비트 폭, 타입 식별자 등에서 무손실이 아니며, 사이드 채널 프로퍼티인 `ua_ticks`, `ua_statuscode`를 통해 원본 데이터를 손실 없이 온전히 보존합니다). | [0010](docs/adr/ADR-0010-opcua-udt-mapping.md) |
-| `acl` *(이관됨)* | **NCMD 제어 명령 인가** ([eclipse-sparkplug/sparkplug#600](https://github.com/eclipse-sparkplug/sparkplug/issues/600) 연계). 핵심 관찰: NCMD 토픽 자체에는 구체적 명령명이 포함되지 않으며 실제 명령 식별자는 페이로드 메트릭 내부에 존재합니다. 따라서 브로커 토픽 ACL은 *노드 단위 도달 가능성*만 강제할 수 있으며, 명령별·값별 심층 인가는 페이로드 가시성을 확보한 엣지에서 수행되어야 합니다. 단일 기본 거부(Deny-by-Default) 정책 파일로부터 엣지 인가자(폐쇄형 실패), 브로커 ACL 아티팩트, CI 린트 게이트가 파생됩니다. 또한 요청 단독 인가자로 표현 불가능한 컨텍스트 조건부 판정을 위해 **JVM 내장 OPA/Rego 정책 평가(Chicory 기반 WebAssembly)**를 지원하며, 저장소에 커밋된 wasm과의 CI 드리프트 방지 가드가 포함됩니다. **커밋 `0b9b1ae`에서 [bifrost](https://github.com/yggdrasil-iiot/bifrost)로 이관되어 본 저장소에는 `acl/` 코드가 더 이상 포함되지 않습니다.** | [0011](docs/adr/ADR-0011-command-authorization.md) |
-| `drift` | **런타임 스키마 드리프트 감지** (수동 관측 전용): 관측된 NBIRTH UDT 정의를 레지스트리의 정본(Source of Truth)과 수동 비교하여(UNREGISTERED / VERSION_DRIFT / 멤버 불일치), 노후화 상태를 추적하고 거버넌스 건전성 메트릭을 발행합니다. 이를 통해 배포 전 사전 게이트(`schema`)가 연 거버넌스 루프를 사후 런타임에서 완결합니다. | [0012](docs/adr/ADR-0012-runtime-drift-detection.md) |
+## 4. 엔지니어링 모듈 및 핵심 해결 과제 (Modules & Solutions)
 
-프로토콜 기본 특성을 규명하기 위해 선행 구현된 세션 프리미티브 데모: Birth/Death 라이프사이클 + bdSeq/seq 시퀀스 + Rebirth 재생성(`SessionDemo`), 기본 호스트 기반 저장 후 전달(`StateStoreForwardDemo`), Sparkplug 인식 브로커 기반 지연 참여자(Late-Joiner) A/B 비교(`LateJoinerExperiment`), UDT 무단 덮어쓰기 감지 결함(`UdtDemo`), Protobuf→JSON 상태 변환 브리지(`JsonBridgeDemo`), 세션 탈취 폭풍 실증(`StolenSessionDemo`).
+본 저장소의 순수 로직 모듈 전체는 TDD(테스트 주도 개발)로 구축되었으며, 외부 브로커 없이 99개의 단위 테스트를 100% 통과합니다 (`mvn test`).
 
-### OT→IT 데이터 흐름 (OT→IT Data Flow)
+| 모듈 | 기술적 해결 과제 및 구현 명세 | 관련 ADR |
+|------|--------------------------------|----------|
+| `schema` | **SemVer 기반 데이터 계약 레지스트리**<br>디스크 기반 UDT 스키마 저장소 및 호환성 판정 체계(`CompatMode`: FORWARD, BACKWARD, FULL, NONE). 분산 환경에서 지연 소비자를 보호하기 위해 기본값으로 FORWARD 호환성을 강제합니다.<br>*(참고: CI 파이프라인 검증 게이트 자체(`SchemaGate`, `CompatibilityChecker`)는 상위 프로덕트인 [bifrost](https://github.com/yggdrasil-iiot/bifrost)로 승격 이관되었습니다.)* | [ADR-0007](docs/adr/ADR-0007-schema-registry-gate.md) |
+| `spb40` | **Sparkplug 4.0 스키마-데이터 분리 프로토타입**<br>대규모 IIoT 환경의 대역폭 낭비를 해소하기 위해 제안된 스키마-데이터 분리(#608) 실증. 완전한 UDT 정의는 영속(Retained) `DEFINITION` 토픽에 1회만 발행하고, 텔레메트리는 경량 `schemaRef`와 Alias 전용 메트릭만 전송합니다. 멤버별 엔지니어링 단위(`engUnit`, #607) 및 메트릭 품질(`quality`, #603) 속성을 지원합니다.<br>• **실측 결과**: 단일 NBIRTH 기준 **인라인 방식 328 B 대비 경량 분리 방식 162 B로 약 50% 페이로드 크기 절감**. 소비자 측 스키마 학습은 멱등성을 완벽히 보장합니다. | [ADR-0008](docs/adr/ADR-0008-schema-data-separation.md) |
+| `kafka` | **상태 기반 UNS→Kafka 브리지**<br>NBIRTH 상태로부터 Alias→Name 매핑 테이블을 복원하고 최신 관측값(LKV)을 누적하여 ISA-95 토픽으로 변환합니다.<br>• **핵심 통찰**: Sparkplug의 RBE(Report by Exception) 최신값 보존은 Kafka의 **로그 압축(Log Compaction)**과 수학적 동형(Isomorphic) 관계입니다. 데이터 계약 위반 레코드는 메인 토픽 오염을 방지하기 위해 Dead Letter Queue(DLQ)로 즉시 격리 라우팅됩니다. | [ADR-0009](docs/adr/ADR-0009-uns-to-kafka-stateful-bridge.md) |
+| `opcua` | **OPC UA 정보 모델 → Sparkplug UDT 매핑 및 손실 원장(Loss Ledger)**<br>Eclipse Milo를 통해 계층적 객체 모델을 브라우징하여 Sparkplug 단일 평면 UDT로 변환합니다. 서브타입 상속 및 `HasInterface` 다중 상속을 출처 메타데이터와 함께 평탄화합니다.<br>• **손실 원장**: OPC UA와 Sparkplug 간 타입 체계 불일치(DateTime 나노초 정밀도, StatusCode 비트 폭, NodeId 등)로 인한 변환 손실을 숨기지 않고 1급 산출물로 기록하며, 정밀 원본은 사이드 채널 프로퍼티(`ua_ticks`, `ua_statuscode`)로 온전히 보존합니다. | [ADR-0010](docs/adr/ADR-0010-opcua-udt-mapping.md) |
+| `acl` *(이관됨)* | **NCMD 제어 명령 2계층 심층 인가 (Layered Policy-as-Code)**<br>Sparkplug NCMD 토픽에는 구체적인 명령 이름이 포함되지 않으며 실제 명령 식별자는 페이로드 메트릭 내부에 존재합니다. 따라서 MQTT 브로커 수준의 토픽 ACL은 *노드 도달 가능성*만 제어할 수 있으며, 명령별·값별 인가는 페이로드 가시성을 확보한 엣지에서 직접 수행되어야 합니다. 단일 정책 파일(`command-policy.json`)로부터 엣지 인가 엔진, 브로커 ACL, CI 린트 게이트를 동시 투영합니다. JVM 내장 OPA/Rego(Wasm via Chicory) 평가를 지원합니다.<br>*(참고: 런타임 제어 경계 데몬(Heimdall)으로 발전하여 [bifrost](https://github.com/yggdrasil-iiot/bifrost)로 통합되었습니다.)* | [ADR-0011](docs/adr/ADR-0011-command-authorization.md) |
+| `drift` | **런타임 스키마 드리프트 감지 (수동 관측 모니터링)**<br>현장에서 유통되는 실시간 NBIRTH UDT 정의를 레지스트리의 단일 진실 원천(SSOT)과 수동 비교하여 미등록 타입, 버전 불일치, 멤버 변조를 실시간 감지하고 노후화 상태 및 거버넌스 건전성 메트릭을 발행합니다. | [ADR-0012](docs/adr/ADR-0012-runtime-drift-detection.md) |
+
+### OT→IT 엔터프라이즈 데이터 파이프라인
 
 <!-- mirror of docs/diagrams/src/ot-it-dataflow.mmd — keep in sync (see docs/diagrams/README.md) -->
 ```mermaid
@@ -70,48 +91,80 @@ flowchart LR
     SC -.->|"carried in birth"| DEF
 ```
 
-## 포트폴리오 연계 — 인가된 제어 명령 경로 (Bifrost 이관)
+---
 
-> [!NOTE]
-> 본 랩은 원래 인가된 제어 명령 경로의 전체 라이브 파이프라인을 포함하고 있었습니다. `bridge` 패키지의 `NcmdOpcUaBridge`가 `spBv1.0/{group}/NCMD/{edge}`를 구독하고, `acl` 모듈을 통해 엣지에서 기본 거부(Deny-by-Default) 방식으로 각 명령을 재인가한 후, OPC UA에 제어를 적용(Write + Read 확인)하였습니다.
-> "명령별·값별 인가는 브로커 토픽이 아닌 페이로드 가시성이 확보된 엣지에서 직접 수행되어야 한다"는 핵심 설계 원칙은 [bifrost](https://github.com/yggdrasil-iiot/bifrost)의 런타임 제어 경계 데몬(Heimdall)으로 발전하여 이관되었습니다.
->
-> 커밋 `0b9b1ae` (2026-07-08)를 통해 `acl/` 및 `bridge/`는 본 저장소에서 분리 이관되었습니다. 과거 연계 파이프라인의 상위 발신자였던 koshei 컴포넌트는 폐기되었습니다. 상세한 이력은 `git log`, [ADR-0011](docs/adr/ADR-0011-command-authorization.md), 그리고 bifrost 저장소를 참조하십시오.
+## 5. 프로토콜 특성 검증 및 엣지케이스 실증 랩 (Session Fundamentals)
 
-## 빌드 및 실행 가이드 (Running)
+실제 산업 통신망에서 발생할 수 있는 프로토콜 엣지케이스를 선행 분석하기 위해 독립적으로 구축된 실증 데모군입니다:
 
-요구 사항: Java 17+, Maven 3.9+, Docker.
+- **세션 수명주기 및 시퀀스 정합성 (`SessionDemo`)**: Birth/Death 수명주기 상태 머신, bdSeq(결정적 단조 증가) 및 seq(0~255 순환) 검증, Rebirth 요청 시나리오 검증.
+- **지연 참여자(Late-Joiner) 상태 동기화 실험 (`LateJoinerExperiment`, [ADR-0002](docs/adr/ADR-0002-late-joiner-state-on-connect.md))**: 일반 MQTT 브로커와 Sparkplug 인식(Aware) 브로커 환경에서 뒤늦게 접속한 소비자가 최신 설비 상태를 수신하는 과정을 A/B 비교 테스트.
+- **기본 호스트 기반 저장 후 전달 (`StateStoreForwardDemo`, [ADR-0001](docs/adr/ADR-0001-primary-host-store-and-forward.md))**: Primary Host 연결 단절 시 엣지 노드의 로컬 버퍼링(Store) 및 세션 재수립 후 순차 전달(Forward) 메커니즘 실증.
+- **세션 탈취 플래핑 폭풍 실증 (`StolenSessionDemo`, [ADR-0006](docs/adr/ADR-0006-edge-node-id-uniqueness.md))**: 동일한 Client ID를 가진 두 노드가 동시 접속할 때 발생하는 상호 연결 해제/재접속 무한 루프(Flapping Storm)를 재현하고 식별자 유일성 규칙의 중요성 입증.
+- **Protobuf 불투명성 해소 브리지 (`JsonBridgeDemo`, [ADR-0004](docs/adr/ADR-0004-protobuf-opacity-json-bridge.md))**: 외부 비-Sparkplug 시스템을 위한 실시간 JSON 구조화 변환 브리지.
 
+---
+
+## 6. 빠른 시작 및 빌드 가이드 (Getting Started)
+
+### 환경 요구 사항
+- **Java**: OpenJDK 17 이상
+- **Build Tool**: Apache Maven 3.9 이상
+- **Container Runtime**: Docker Desktop 또는 Docker Engine (Compose 지원)
+
+### 빌드 및 단위 테스트
 ```bash
-docker compose up -d        # HiveMQ CE (:1883, 로컬 개발용 allow-all) + Kafka KRaft (:9092)
-mvn test                    # 99개 순수 로직 단위 테스트 실행 (외부 브로커 불필요)
+# 1. 로컬 인프라 실행 (HiveMQ CE on :1883 + Kafka KRaft on :9092)
+docker compose up -d
+
+# 2. 99개 순수 로직 단위 테스트 실행 (외부 브로커 없이 동작)
+mvn test
 ```
 
-데모 실행 (저장소 루트에서 실행하십시오 — 파일 레지스트리는 현재 작업 디렉토리 기준 상대 경로로 참조됩니다):
+### 인터랙티브 라이브 데모 실행
+저장소 루트 디렉토리에서 아래 명령어로 각 데모를 직접 실행할 수 있습니다:
 
 ```bash
-mvn -q exec:java -Dexec.mainClass=dev.krillin.sparkplug.SessionDemo        # Sparkplug 세션 End-to-End 동작
-mvn -q exec:java -Dexec.mainClass=dev.krillin.sparkplug.Spb40Demo          # #608/#607/#603 프로토타입 실증
-mvn -q exec:java -Dexec.mainClass=dev.krillin.sparkplug.UnsToKafkaDemo     # 상태 기반 UNS→Kafka 브리지
-mvn -q exec:java -Dexec.mainClass=dev.krillin.sparkplug.DriftMonitorDemo   # 런타임 스키마 드리프트 감지
+# Sparkplug 세션 End-to-End 수명주기 동작
+mvn -q exec:java -Dexec.mainClass=dev.krillin.sparkplug.SessionDemo
+
+# Sparkplug 4.0 스키마-데이터 분리 프로토타입 실증
+mvn -q exec:java -Dexec.mainClass=dev.krillin.sparkplug.Spb40Demo
+
+# 상태 기반 UNS→Kafka 스트리밍 브리지
+mvn -q exec:java -Dexec.mainClass=dev.krillin.sparkplug.UnsToKafkaDemo
+
+# 런타임 스키마 드리프트 실시간 감지 데모
+mvn -q exec:java -Dexec.mainClass=dev.krillin.sparkplug.DriftMonitorDemo
 ```
 
-OPC UA 브리지 데모(`OpcUaUdtBridgeDemo`)는 시뮬레이션 서버가 추가로 필요합니다: `python opcua-sim-server.py` (`pip install asyncua` 필요).
+> **OPC UA 연동 데모 안내**:
+> `OpcUaUdtBridgeDemo`를 실행하려면 파이썬 기반 OPC UA 시뮬레이터 서버가 사전에 구동되어야 합니다:
+> ```bash
+> pip install asyncua
+> python opcua-sim-server.py
+> mvn -q exec:java -Dexec.mainClass=dev.krillin.sparkplug.opcua.OpcUaUdtBridgeDemo
+> ```
 
-Sparkplug 인식(aware) 모드에서 지연 참여자(Late-Joiner) A/B 실험을 수행하려면, [hivemq-sparkplug-aware-extension](https://github.com/hivemq/hivemq-sparkplug-aware-extension)을 `hivemq-extensions/` 디렉토리에 배치하고([hivemq-extensions/README.md](hivemq-extensions/README.md) 참조), `docker compose -f docker-compose.yml -f docker-compose.aware.yml up -d --force-recreate` 명령으로 기동하십시오.
+---
 
-## 문서 체계 (Documentation)
+## 7. 엔지니어링 표준 문서 체계 (Documentation Suite)
 
-- [`docs/glossary.md`](docs/glossary.md) — 표준 기술 용어 사전 (도메인 개념, 데이터 계약, 상태 머신, 통신 프로토콜, 거버넌스 원칙)
-- [`docs/adr/`](docs/adr/README.md) — 11편의 아키텍처 결정 레코드 (ADR, 한국어 정본 및 영어 번역본 제공)
-- [`docs/namespace-standard.md`](docs/namespace-standard.md) — UNS 네임스페이스 거버넌스 표준 v0.1 (ISA-95→토픽 인코딩, 식별자 고유성, 데이터 계약, UDT 버전 관리, Alias 레지스트리, 제어 명령 ACL, STATE/저장 후 전달 역할, 관측 가능성) — [영어 번역본](docs/namespace-standard.en.md)
+- [`docs/glossary.md`](docs/glossary.md) — **표준 기술 용어 사전**: 도메인 개념, 데이터 계약, 상태 머신, 통신 프로토콜, 거버넌스 원칙 정의 (단일 진실 원천)
+- [`docs/adr/`](docs/adr/README.md) — **아키텍처 결정 레코드 (ADR)**: 핵심 설계 결정 11편의 맥락, 결정 사항, 결과 분석 (한국어 정본 및 영문 번역본 제공)
+- [`docs/namespace-standard.md`](docs/namespace-standard.md) — **UNS 네임스페이스 거버넌스 표준 사양서 v0.1**: ISA-95 매핑, 식별자 유일성, 데이터 계약, UDT 버전 관리, 제어 명령 인가 규격 ([영어 번역본](docs/namespace-standard.en.md))
+- [`docs/diagrams/`](docs/diagrams/README.md) — **다이어그램 자산 및 시각 거버넌스 사양서**: GitHub 다크 모드 가독성을 보장하는 불투명 카드 캔버스 설계 원칙 및 자산 현황
 
-## 엔지니어링 투명성 선언 (Honesty Notes)
+---
 
-- 개인 실증(PoC) 규모: 단일 노드 브로커, JSON 파일 기반 레지스트리, At-Least-Once Kafka 전송, 시퀀스 재정렬 미지원.
-- OPC UA→UDT 매핑은 **무손실(Lossless)이 아니며**, 이를 숨기지 않습니다 — 손실 항목은 멤버 단위 손실 원장(Loss Ledger)에 기록되며, 정밀도가 요구되는 원본 데이터는 사이드 채널 프로퍼티를 통해 원형 그대로 보존됩니다.
-- 본 랩의 일부 구현 및 문서는 AI 지원을 받아 작성되었으나, 모든 아키텍처 설계, 수치 측정, 데모 결과는 실제 구동 중인 브로커 및 서비스를 대상으로 작성자가 직접 검증을 완료하였습니다.
+## 8. 엔지니어링 트레이드오프 및 설계 한계 (Scope & Trade-offs)
+
+1. **PoC 단계의 범위 한정**: 본 랩은 개인 검증 수준의 PoC 규모로 단일 브로커, 단일 노드 스케일, JSON 파일 기반 레지스트리를 채택하였습니다. 대규모 엔터프라이즈 분산 환경(분산 레지스트리, 4단계 검명 등)은 상위 프로덕트인 [bifrost](https://github.com/yggdrasil-iiot/bifrost)에서 확장 구현되었습니다.
+2. **손실 원장의 솔직한 공개**: OPC UA에서 Sparkplug UDT로의 사상은 프로토콜 본질상 무손실일 수 없습니다. 본 프로젝트는 변환 손실을 은폐하지 않고 `LossLedger`를 통해 정량적으로 기록하고 사이드 채널로 원본을 보존하는 공학적 정직성을 채택하였습니다.
+3. **직접 검증 완료**: 본 랩의 문서 및 구현 일부는 AI의 지원을 받아 생산성을 높였으나, 모든 아키텍처 다이어그램, 벤치마크 수치(페이로드 크기 절감률 등), 라이브 서비스 동작 결과는 실제 구동 환경에서 저자가 직접 검증을 완료하였습니다.
+
+---
 
 ## 라이선스 (License)
 
-[Apache-2.0](LICENSE)
+[Apache License 2.0](LICENSE)
