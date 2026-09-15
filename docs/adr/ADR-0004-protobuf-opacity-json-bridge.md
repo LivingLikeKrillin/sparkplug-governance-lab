@@ -1,35 +1,37 @@
-# ADR-0004 — protobuf 불투명성 → JSON UNS 브리지 (이중 네임스페이스)
+# ADR-0004 — Protobuf 역직렬화 불투명성 해소를 위한 상태 기반 JSON UNS 브리지
 
-- 상태: **Accepted** (비-Sparkplug 소비자 필요 시)
+- 상태: **Accepted** (비-Sparkplug IT 소비 시스템 연계 시)
 - 일자: 2026-06-03
-- 근거: 직접 실험 (`src/.../JsonBridgeDemo.java` + `SparkplugToJsonBridge.java`)
+- 근거: 실증 테스트 (`src/.../JsonBridgeDemo.java` + `SparkplugToJsonBridge.java`), HiveMQ CE
 
-## Context
-Sparkplug 페이로드는 **바이너리 protobuf** → MQTT Explorer/IT 툴이 못 읽고, raw Sparkplug에는 retained 현재상태도 없다(ADR-0002). IT/분석/평문 소비자가 데이터를 쓰려면?
+## 1. 배경 및 맥락 (Context)
+Sparkplug B 표준 페이로드는 Protobuf 바이너리로 인코딩되므로, 전용 디코더나 스키마 정의를 보유하지 않은 일반 IT 모니터링 도구(MQTT Explorer 등), 경량 웹 대시보드, 범용 분석 시스템에서는 페이로드 내부 데이터를 직접 판독할 수 없습니다. 또한 표준 Sparkplug 브로커 토픽에는 Retained 플래그 기반의 최신 상태 저장이 기본 제공되지 않습니다. 
 
-## Experiment (실측)
-브리지가 `spBv1.0/{group}/#` 구독·디코드 → `uns/{group}/{edge}/{metric}` 에 **retained JSON** 재발행:
-- NBIRTH Temperature/Pump/Running → JSON 재발행.
-- NDATA(alias-only, raw=`50B protobuf 08 c0 ce 87...` 안 읽힘) → 브리지가 **alias→name 해석** 후 JSON(value=20.5/21.0…) 재발행.
-- 늦게 붙은 평문 JSON 소비자가 `uns/#` 구독 → 접속 즉시 **retained 현재값(Temp=21.0, Pump=false) 확보**.
+이에 따라 비-Sparkplug IT 소비자가 즉각적으로 현장 데이터를 활용할 수 있도록 지원하는 프로토콜 변환 및 투명화 메커니즘이 요구됩니다.
 
-## Findings
-1. **protobuf는 불투명** — Sparkplug 모르는 소비자는 직접 못 씀.
-2. **브리지는 Sparkplug-stateful이어야 함** — NDATA alias를 풀려면 NBIRTH의 name↔alias를 캐시(birth 추적). 단순 republish 아님. NBIRTH 놓치면 alias 미해석.
-3. **JSON+retained = 임의 IT 소비자에게 state-on-connect** (ADR-0002의 aware-cert를 평문 세계로 확장).
-4. **대가: 네임스페이스 둘**(spBv1.0 protobuf + uns JSON) → 드리프트/유지비, 브리지가 단일 장애점.
+## 2. 실험 및 실측 결과 (Empirical Verification)
+`SparkplugToJsonBridge`를 통해 `spBv1.0/{group}/#` 토픽을 구독 및 역직렬화한 후, `uns/{group}/{edge}/{metric}` 토픽에 **Retained JSON** 형식으로 재발행하는 실증을 수행하였습니다:
+- NBIRTH 수신 시: 메트릭 카탈로그(Temperature, Pump, Running 등)를 파싱하여 개별 JSON 토픽으로 변환 및 영속 발행.
+- NDATA 수신 시: 압축 전송된 별칭 전용 페이로드(예: 50바이트 바이너리)를 브리지 내부 캐시를 통해 `Alias → Metric Name`으로 복원한 후, JSON 형태(예: `{"value": 21.0, "timestamp": ...}`)로 재발행.
+- 신규 접속한 IT 소비자가 `uns/#`를 구독하는 즉시 Retained된 최신 공정값(Temp=21.0, Pump=false)을 결손 없이 수신함을 확인하였습니다.
 
-## Decision (거버넌스)
-- IT/평문 소비자·휴먼 브라우징이 필요하면 **거버넌스된 Sparkplug→JSON 브리지**로 retained 현재상태를 병행 UNS에 발행.
-- 브리지를 **1급 컴포넌트로 통치**: 모니터링, 재시작 시 rebirth로 birth 재수집, alias 캐시 영속.
-- **Sparkplug-native 소비자는 aware-cert(ADR-0002)**, **비-Sparkplug 소비자만 JSON 브리지** — 역할 분리(ADR-0001 패턴과 동일 사고).
-- JSON 네임스페이스 스키마를 **UDT(ADR-0005)와 함께 거버넌스**해 이중 정의 드리프트 방지.
+## 3. 핵심 식별 사항 (Findings)
+1. **바이너리 불투명성(Opacity)**: Protobuf 스키마를 탑재하지 않은 일반 엔터프라이즈 애플리케이션은 원시 Sparkplug B 토픽을 직접 소비할 수 없습니다.
+2. **브리지의 상태 유지(Stateful) 필수성**: NDATA의 메트릭 별칭(Alias)을 정상 역참조하기 위해서는 브리지가 NBIRTH 메시지를 선제 수신하여 `Name ↔ Alias` 매핑 테이블을 메모리에 캐싱하고 유지해야 합니다.
+3. **병행 네임스페이스 운용 트레이드오프**: 바이너리 토픽(`spBv1.0/...`)과 JSON 토픽(`uns/...`)의 이중 네임스페이스 운용으로 인해 토픽 관리 비용 및 브리지 장애 시 데이터 지연 위험이 수반됩니다.
 
-## Consequences
-- 브리지 가용성/상태 = 운영 리스크(birth 못 받으면 alias 깨짐).
-- spBv1.0 metric 경로 → uns 경로 매핑 = 네임스페이스 결정(namespace-standard §4).
-- 구현 교훈: 브리지는 구독/발행 client를 **분리**해야 함 — Paho 콜백 스레드에서 publish하면 자기 메시지 루프를 막아 교착.
+## 4. 아키텍처 결정 (Decision)
+- **거버넌스된 Sparkplug-JSON 브리지 도입**: 엔터프라이즈 IT 소비 계층과의 연계를 위해 상태 기반 프로토콜 변환 브리지를 운영하고, 최신 상태를 Retained JSON 형태로 발행합니다.
+- **소비자 계층별 연계 경로 분리**:
+  - Sparkplug 지원 소비자: 표준 Sparkplug B 토픽 및 Aware 브로커 상태 증명(ADR-0002) 직접 구독.
+  - 비-Sparkplug IT/웹 소비자: 정규화된 JSON 네임스페이스(`uns/...`) 구독.
+- **브리지의 1급 컴포넌트 거버넌스**: 브리지 장애 시 Rebirth를 통한 메트릭 카탈로그 재수집 루틴, 별칭 캐시 영속성, 클라이언트 분리 설계를 필수로 적용합니다.
 
-## Links
-- 코드: `../../src/main/java/dev/krillin/sparkplug/{SparkplugToJsonBridge,JsonBridgeDemo}.java`
-- ADR-0002·ADR-0005 연결
+## 5. 결과 및 영향 (Consequences)
+- **브리지 가용성 관리**: 브리지 기동 상태가 상위 IT 데이터 파이프라인의 핵심 선행 조건이 됩니다.
+- **토픽 매핑 규약 명문화**: Sparkplug 메트릭 경로와 JSON UNS 경로 간의 1:1 정합성 규칙을 네임스페이스 표준(`namespace-standard.md` §4)에 반영합니다.
+- **동시성 설계 준수**: Paho MQTT 클라이언트 운용 시 구독 스레드와 발행 스레드를 분리하여 자체 메시지 루프에 의한 상호 교착을 차단합니다.
+
+## 6. 관련 자산 및 링크
+- 소스 코드: `src/main/java/dev/krillin/sparkplug/{SparkplugToJsonBridge,JsonBridgeDemo}.java`
+- 연계 ADR: ADR-0002 (Aware Broker 상태 증명), ADR-0005 (UDT 스키마 거버넌스)

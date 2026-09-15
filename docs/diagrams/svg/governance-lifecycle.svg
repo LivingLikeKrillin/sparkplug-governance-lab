@@ -1,5 +1,5 @@
 <svg viewBox="0 0 1140 360" width="1140" height="360" xmlns="http://www.w3.org/2000/svg" role="img" font-family="Malgun Gothic,Apple SD Gothic Neo,Noto Sans KR,Segoe UI,-apple-system,Helvetica,Arial,sans-serif">
-  <title>거버넌스 라이프사이클 — 외부 Bifrost 통치를 소비해 엣지가 집행하고 관측이 되먹여 루프를 닫는다 (PoC에서 실제로 도는 루프)</title>
+  <title>거버넌스 수명주기 — 외부 레지스트리 계약 소비, 엣지 인가 집행 및 런타임 관측 피드백 루프</title>
   <defs>
     <marker id="ag" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#57606a"/></marker>
     <marker id="ab" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#0969da"/></marker>
@@ -8,8 +8,8 @@
 
   <rect x="8" y="8" width="1124" height="344" rx="14" fill="#ffffff" stroke="#d0d7de"/>
 
-  <text x="32" y="44" font-size="19" font-weight="700" fill="#1f2328">거버넌스 라이프사이클 — 통치가 열고, 관측이 닫는다</text>
-  <text x="33" y="68" font-size="12" fill="#57606a">PoC에서 실제로 도는 루프 · 외부 Bifrost 통치를 소비해 엣지가 집행하고, 관측이 다음 통치로 되먹인다</text>
+  <text x="32" y="44" font-size="19" font-weight="700" fill="#1f2328">거버넌스 수명주기 — 사전 배포 게이트와 런타임 관측의 상호보완</text>
+  <text x="33" y="68" font-size="12" fill="#57606a">엔드투엔드 거버넌스 루프 · Bifrost 레지스트리 계약을 엣지가 집행하고, 런타임 관측 데이터가 거버넌스로 환류</text>
 
   <!-- edges -->
   <g fill="none" stroke-width="1.6">
@@ -21,32 +21,32 @@
 
   <!-- edge labels (no chips) -->
   <g font-size="11">
-    <text x="232" y="140" fill="#0969da">정책·활성버전 소비</text>
-    <text x="502" y="140" fill="#9a6700">통치된 쓰기 (APPLY)</text>
-    <text x="772" y="140" fill="#57606a">NDATA 관측</text>
-    <text x="392" y="294" fill="#57606a">관측 → 다음 통치 · 루프가 닫힌다 (verify-then-trust)</text>
+    <text x="226" y="140" fill="#0969da">정책 · 활성 버전</text>
+    <text x="496" y="140" fill="#9a6700">인가 제어 명령 (APPLY)</text>
+    <text x="768" y="140" fill="#57606a">NDATA 텔레메트리 관측</text>
+    <text x="360" y="294" fill="#57606a">관측 데이터 기반 정책 검증 및 피드백 루프 완결 (Verify-then-Trust)</text>
   </g>
 
   <!-- nodes -->
   <g font-size="12.5" text-anchor="middle" fill="#1f2328">
     <rect x="48" y="150" width="214" height="84" rx="6" fill="#ddf4ff" stroke="#0969da"/>
-    <text x="155" y="182" font-weight="600">Bifrost · 통치 (외부)</text>
-    <text x="155" y="202" font-size="11" fill="#57606a">admit · activate</text>
-    <text x="155" y="220" font-size="11" fill="#57606a">registry · policy</text>
+    <text x="155" y="179" font-weight="600">Bifrost 레지스트리</text>
+    <text x="155" y="198" font-size="11" fill="#57606a">계약 승인 · 버전 활성화</text>
+    <text x="155" y="217" font-size="11" fill="#57606a">스키마 레지스트리 · 인가 정책</text>
 
     <rect x="316" y="150" width="224" height="84" rx="6" fill="#eaf3ea" stroke="#1a7f37"/>
-    <text x="428" y="182" font-weight="700">Heimdall 엣지 · 집행</text>
-    <text x="428" y="202" font-size="11" fill="#57606a">재인가 · 활성버전 바인딩</text>
-    <text x="428" y="220" font-size="11" fill="#57606a">fail-closed</text>
+    <text x="428" y="179" font-weight="700">Heimdall 엣지 게이트</text>
+    <text x="428" y="198" font-size="11" fill="#57606a">명령 재인가 · 활성 버전 바인딩</text>
+    <text x="428" y="217" font-size="11" fill="#57606a">폐쇄형 실패 (Fail-Closed)</text>
 
     <rect x="594" y="150" width="210" height="84" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
-    <text x="699" y="182" font-weight="600">현장 런타임</text>
-    <text x="699" y="202" font-size="11" fill="#57606a">OPC-UA 쓰기</text>
-    <text x="699" y="220" font-size="11" fill="#57606a">Sparkplug NDATA</text>
+    <text x="699" y="179" font-weight="600">현장 런타임</text>
+    <text x="699" y="198" font-size="11" fill="#57606a">OPC UA 제어 쓰기</text>
+    <text x="699" y="217" font-size="11" fill="#57606a">Sparkplug NDATA 전송</text>
 
     <rect x="858" y="150" width="214" height="84" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
-    <text x="965" y="182" font-weight="600">관측 · UNS</text>
-    <text x="965" y="202" font-size="11" fill="#57606a">Muninn → UNS</text>
-    <text x="965" y="220" font-size="11" fill="#57606a">drift 감지</text>
+    <text x="965" y="179" font-weight="600">런타임 관측 (UNS)</text>
+    <text x="965" y="198" font-size="11" fill="#57606a">Muninn UNS 발행</text>
+    <text x="965" y="217" font-size="11" fill="#57606a">스키마 드리프트 감지</text>
   </g>
 </svg>
