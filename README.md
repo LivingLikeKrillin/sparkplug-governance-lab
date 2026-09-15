@@ -155,7 +155,7 @@ mvn -q exec:java -Dexec.mainClass=dev.krillin.sparkplug.DriftMonitorDemo
 ## 7. 엔지니어링 표준 문서 체계 (Documentation Suite)
 
 - [`docs/glossary.md`](docs/glossary.md) — **표준 기술 용어 사전**: 도메인 개념, 데이터 계약, 상태 머신, 통신 프로토콜, 거버넌스 원칙 정의 (단일 진실 원천)
-- [`docs/adr/`](docs/adr/README.md) — **아키텍처 결정 레코드 (ADR)**: 핵심 설계 결정 11편의 맥락, 결정 사항, 결과 분석 (한국어 정본 및 2026-06 기준 영문본 제공, 현재 영문본은 최신 한국어 정본과 동기화되지 않음)
+- [`docs/adr/`](docs/adr/README.md) — **아키텍처 결정 레코드 (ADR)**: 핵심 설계 결정 11편의 맥락, 결정 사항, 결과 분석 (한국어 정본 및 2026-06~07 기준 영문본 제공, 현재 영문본은 최신 한국어 정본과 동기화되지 않음)
 - [`docs/namespace-standard.md`](docs/namespace-standard.md) — **UNS 네임스페이스 거버넌스 표준 사양서 v0.1**: ISA-95 매핑, 식별자 유일성, 데이터 계약, UDT 버전 관리, 제어 명령 인가 규격 ([2026-06 기준 영문본](docs/namespace-standard.en.md))
 - [`docs/diagrams/`](docs/diagrams/README.md) — **다이어그램 자산 및 시각 거버넌스 사양서**: GitHub 다크 모드 가독성을 보장하는 불투명 카드 캔버스 설계 원칙 및 자산 현황
 
