@@ -1,5 +1,5 @@
-<svg viewBox="0 0 1040 700" width="1040" height="700" xmlns="http://www.w3.org/2000/svg" role="img" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif">
-  <title>NCMD authorization — broker sees the topic, the edge sees the payload, one policy feeds both</title>
+<svg viewBox="0 0 1040 700" width="1040" height="700" xmlns="http://www.w3.org/2000/svg" role="img" font-family="Malgun Gothic,Apple SD Gothic Neo,Noto Sans KR,Segoe UI,-apple-system,Helvetica,Arial,sans-serif">
+  <title>NCMD 제어 명령 인가 — 브로커는 토픽만 검사, 엣지는 페이로드 심층 인가 (단일 정책 2계층 방어)</title>
   <defs>
     <marker id="ag" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#57606a"/></marker>
     <marker id="ab" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#0969da"/></marker>
@@ -8,18 +8,18 @@
   <rect x="8" y="8" width="1024" height="684" rx="14" fill="#ffffff" stroke="#d0d7de"/>
 
   <!-- title -->
-  <text x="32" y="42" font-size="15" font-weight="600" fill="#1f2328">NCMD authorization — the broker sees the topic, the edge sees the payload, one policy feeds both</text>
-  <text x="32" y="62" font-size="12" fill="#57606a">deny-by-default, enforced at TWO layers from ONE lint-gated command-policy.json</text>
+  <text x="32" y="42" font-size="15" font-weight="600" fill="#1f2328">NCMD 제어 명령 인가 — 브로커는 토픽만 검사, 엣지는 페이로드 심층 인가</text>
+  <text x="32" y="62" font-size="12" fill="#57606a">기본 거부(Deny-by-Default) 원칙 · 단일 정책(command-policy.json) 기반 2계층 심층 방어</text>
 
   <!-- ===== zones ===== -->
   <rect x="112" y="200" width="300" height="124" rx="10" fill="#fbfcfd" stroke="#e6e9ee"/>
-  <text x="128" y="224" font-size="11" font-weight="700" letter-spacing="1" fill="#8b95a1">MQTT BROKER — SEES THE TOPIC ONLY</text>
+  <text x="128" y="224" font-size="11" font-weight="700" letter-spacing="1" fill="#8b95a1">MQTT 브로커 — 토픽만 검사 (노드 도달성)</text>
 
   <rect x="112" y="360" width="300" height="300" rx="10" fill="#fbfcfd" stroke="#e6e9ee"/>
-  <text x="128" y="384" font-size="11" font-weight="700" letter-spacing="1" fill="#8b95a1">EDGE NODE — SEES THE PAYLOAD</text>
+  <text x="128" y="384" font-size="11" font-weight="700" letter-spacing="1" fill="#8b95a1">엣지 노드 — 페이로드 직접 검사 (심층 인가)</text>
 
   <rect x="600" y="200" width="416" height="460" rx="10" fill="#eef5ff" stroke="#cfe0f5"/>
-  <text x="616" y="224" font-size="11" font-weight="700" letter-spacing="1" fill="#0969da">SINGLE POLICY SOURCE</text>
+  <text x="616" y="224" font-size="11" font-weight="700" letter-spacing="1" fill="#0969da">단일 정책 원천 (POLICY-AS-CODE)</text>
 
   <!-- ===== edges ===== -->
   <g fill="none" stroke-width="1.6">
@@ -29,64 +29,64 @@
     <!-- ALLOW (blue control) -->
     <polyline points="262,484 262,556" stroke="#0969da" marker-end="url(#ab)"/>
     <!-- policy plane -->
-    <polyline points="800,304 800,350" stroke="#0969da" marker-end="url(#ab)"/>
-    <polyline points="800,423 800,470" stroke="#57606a" marker-end="url(#ag)"/>
+    <polyline points="808,304 808,350" stroke="#0969da" marker-end="url(#ab)"/>
+    <polyline points="808,423 808,470" stroke="#57606a" marker-end="url(#ag)"/>
     <!-- crossing feeds (blue control) -->
-    <polyline points="690,385 480,385 480,446 374,446" stroke="#0969da" marker-end="url(#ab)"/>
-    <polyline points="690,498 424,498 424,268 374,268" stroke="#0969da" marker-end="url(#ab)"/>
+    <polyline points="686,385 480,385 480,446 394,446" stroke="#0969da" marker-end="url(#ab)"/>
+    <polyline points="686,498 424,498 424,268 374,268" stroke="#0969da" marker-end="url(#ab)"/>
   </g>
 
   <!-- ===== edge labels (no chips; beside each line) ===== -->
   <g font-size="11">
-    <text x="272" y="170" fill="#57606a">PUBLISH NCMD —</text>
-    <text x="272" y="184" fill="#57606a">topic carries no command name</text>
+    <text x="272" y="170" fill="#57606a">NCMD 발행 —</text>
+    <text x="272" y="184" fill="#57606a">토픽에 명령 식별자 미포함</text>
 
-    <text x="272" y="324" fill="#57606a">payload passes through —</text>
-    <text x="272" y="338" fill="#57606a">broker cannot inspect metrics</text>
+    <text x="272" y="324" fill="#57606a">페이로드 통과 —</text>
+    <text x="272" y="338" fill="#57606a">브로커는 내부 메트릭 검사 불가</text>
 
-    <text x="272" y="524" fill="#0969da">ALLOW</text>
+    <text x="272" y="524" fill="#0969da">ALLOW (인가 승인)</text>
 
-    <text x="808" y="332" fill="#0969da">lint</text>
+    <text x="816" y="332" fill="#0969da">린트 검증</text>
 
-    <text x="498" y="362" fill="#0969da">loaded at edge:</text>
-    <text x="498" y="376" fill="#0969da">per-command / per-value</text>
+    <text x="498" y="362" fill="#0969da">엣지 적재:</text>
+    <text x="498" y="376" fill="#0969da">명령별 / 수치 범위별 인가</text>
 
-    <text x="432" y="475" fill="#0969da">projected ACL: identity→node</text>
+    <text x="432" y="475" fill="#0969da">투영된 ACL: 신원→노드 도달성</text>
   </g>
 
   <!-- ===== command-path nodes ===== -->
   <g font-size="12.5" text-anchor="middle" fill="#1f2328">
     <rect x="150" y="84" width="224" height="56" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
-    <text x="262" y="112" font-weight="600">Command publisher</text>
-    <text x="262" y="130" font-size="11" fill="#57606a">(any MQTT client)</text>
+    <text x="262" y="108" font-weight="600">명령 발행자</text>
+    <text x="262" y="126" font-size="11" fill="#57606a">(임의 MQTT 클라이언트)</text>
 
     <rect x="150" y="240" width="224" height="56" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
-    <text x="262" y="268" font-weight="600">Topic ACL</text>
-    <text x="262" y="286" font-size="11" fill="#57606a">node-level, all-or-nothing</text>
+    <text x="262" y="264" font-weight="600">토픽 ACL</text>
+    <text x="262" y="282" font-size="11" fill="#57606a">(노드 단위 All-or-Nothing)</text>
 
-    <rect x="150" y="408" width="224" height="76" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
-    <text x="262" y="432" font-weight="600">CommandAuthorizer</text>
-    <text x="262" y="452" font-size="11" fill="#57606a">allowlist + value range + type</text>
-    <text x="262" y="468" font-size="11" fill="#57606a">· deny-by-default</text>
+    <rect x="132" y="408" width="260" height="76" rx="6" fill="#eaf3ea" stroke="#1a7f37"/>
+    <text x="262" y="429" font-weight="700">CommandAuthorizer</text>
+    <text x="262" y="447" font-size="10.5" fill="#57606a">화이트리스트 + 값 범위 + 타입</text>
+    <text x="262" y="465" font-size="10.5" fill="#1a7f37" font-weight="600">기본 거부 (Deny-by-Default)</text>
 
     <rect x="150" y="556" width="224" height="56" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
-    <text x="262" y="584" font-weight="600">execute</text>
-    <text x="262" y="602" font-size="11" fill="#57606a">ALLOW only</text>
+    <text x="262" y="580" font-weight="600">제어 실행</text>
+    <text x="262" y="598" font-size="11" fill="#57606a">(ALLOW 판정 명령만)</text>
   </g>
 
   <!-- ===== policy-plane nodes ===== -->
-  <g font-size="12.5" text-anchor="middle">
-    <rect x="690" y="248" width="220" height="56" rx="6" fill="#ddf4ff" stroke="#0969da"/>
-    <text x="800" y="276" font-weight="600" fill="#1f2328">CI lint gate</text>
-    <text x="800" y="294" font-size="11" fill="#57606a">fail-closed</text>
+  <g font-size="12.5" text-anchor="middle" fill="#1f2328">
+    <rect x="686" y="248" width="244" height="56" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+    <text x="808" y="272" font-weight="600">CI 린트 게이트</text>
+    <text x="808" y="290" font-size="11" fill="#57606a">(폐쇄형 실패 / Fail-Closed)</text>
 
-    <!-- protagonist: the single source -->
-    <path d="M690,350 a110,9 0 0 1 220,0 l 0,64 a110,9 0 0 1 -220,0 Z" fill="#eaf3ea" stroke="#1a7f37"/>
-    <path d="M690,350 a110,9 0 0 0 220,0" fill="none" stroke="#1a7f37"/>
-    <text x="800" y="379" font-weight="600" fill="#1f2328">command-policy.json</text>
-    <text x="800" y="397" font-size="11" fill="#57606a">deny-by-default</text>
+    <path d="M708,354 a100,10 0 0 1 200,0 l0,50 a100,10 0 0 1 -200,0 Z" fill="#ddf4ff" stroke="#0969da"/>
+    <path d="M708,354 a100,10 0 0 0 200,0" fill="none" stroke="#0969da"/>
+    <text x="808" y="379" font-weight="600">command-policy.json</text>
+    <text x="808" y="397" font-size="11" fill="#57606a">(기본 거부 정책 원천)</text>
 
-    <rect x="690" y="470" width="220" height="56" rx="6" fill="#ddf4ff" stroke="#0969da"/>
-    <text x="800" y="502" font-weight="600" fill="#1f2328">BrokerAclProjector</text>
+    <rect x="686" y="470" width="244" height="56" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+    <text x="808" y="494" font-weight="600">BrokerAclProjector</text>
+    <text x="808" y="512" font-size="11" fill="#57606a">(브로커 ACL 아티팩트 산출)</text>
   </g>
 </svg>

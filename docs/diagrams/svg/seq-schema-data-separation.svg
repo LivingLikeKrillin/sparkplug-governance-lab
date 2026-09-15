@@ -1,5 +1,5 @@
-<svg viewBox="0 0 1200 530" width="1200" height="530" xmlns="http://www.w3.org/2000/svg" role="img" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif">
-  <title>Schema / data separation — definition once (retained), thin births resolved via schemaRef</title>
+<svg viewBox="0 0 1200 530" width="1200" height="530" xmlns="http://www.w3.org/2000/svg" role="img" font-family="Malgun Gothic,Apple SD Gothic Neo,Noto Sans KR,Segoe UI,-apple-system,Helvetica,Arial,sans-serif">
+  <title>스키마와 데이터의 분리 — 정의는 영속(Retained) 1회 발행, 이후 경량 Birth 및 텔레메트리 전송</title>
   <defs>
     <marker id="ag" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#57606a"/></marker>
   </defs>
@@ -7,8 +7,8 @@
   <rect x="8" y="8" width="1184" height="514" rx="14" fill="#ffffff" stroke="#d0d7de"/>
 
   <!-- title -->
-  <text x="32" y="40" font-size="16" font-weight="600" fill="#1f2328">Schema / data separation</text>
-  <text x="250" y="40" font-size="13" fill="#57606a">definition published once (retained), thereafter only thin births / data flow</text>
+  <text x="32" y="40" font-size="16" font-weight="600" fill="#1f2328">스키마와 데이터의 분리 (Schema / Data Separation)</text>
+  <text x="440" y="40" font-size="13" fill="#57606a">정의는 영속(Retained) 1회 발행, 이후 경량 Birth 및 RBE 데이터 전송</text>
 
   <!-- lifelines -->
   <g stroke="#d0d7de" stroke-width="1">
@@ -31,35 +31,37 @@
 
   <!-- message labels (11px, above each arrow, no background chip) -->
   <g font-size="11" fill="#57606a">
-    <text x="176" y="152">1   build Definition (Motor @ 1.1.0)</text>
-    <text x="476" y="202">2   DEFINITION - retained, published once</text>
-    <text x="476" y="240">3   thin NBIRTH - schemaRef + alias-only</text>
-    <text x="494" y="253">162 B vs 328 B inline</text>
-    <text x="476" y="302">4   NDATA - alias-only (RBE)</text>
-    <text x="776" y="352">5   retained DEFINITION, learn() = NEW</text>
-    <text x="776" y="390">6   duplicate DEFINITION, learn() = UNCHANGED</text>
-    <text x="794" y="403">(idempotent)</text>
-    <text x="776" y="452">7   thin NBIRTH/NDATA, resolved via schemaRef</text>
+    <text x="176" y="152">1   정의 빌드 (Motor @ 1.1.0)</text>
+    <text x="476" y="202">2   DEFINITION — 영속(Retained) 1회 발행</text>
+    <text x="476" y="240">3   경량 NBIRTH — schemaRef + 별칭 전용</text>
+    <text x="494" y="253">162 B (인라인 328 B 대비 약 50% 절감)</text>
+    <text x="476" y="302">4   NDATA — 별칭 전용 (RBE 예외 보고)</text>
+    <text x="776" y="352">5   영속 DEFINITION 수신, learn() = 신규 등록</text>
+    <text x="776" y="390">6   중복 DEFINITION 수신, learn() = 변경 없음</text>
+    <text x="794" y="403">(멱등성 보장)</text>
+    <text x="776" y="452">7   경량 데이터 수신, schemaRef 기반 역참조 복원</text>
   </g>
 
   <!-- participant boxes -->
   <g font-size="12.5" text-anchor="middle">
     <!-- R = Schema Registry (authority) — accent -->
     <rect x="80" y="60" width="180" height="56" rx="6" fill="#ddf4ff" stroke="#0969da"/>
-    <text x="170" y="84" font-weight="600" fill="#1f2328">Schema Registry</text>
-    <text x="170" y="102" font-size="11" fill="#57606a">(authority)</text>
+    <text x="170" y="84" font-weight="600" fill="#1f2328">스키마 레지스트리</text>
+    <text x="170" y="102" font-size="11" fill="#57606a">(정본 권위 / Authority)</text>
 
     <!-- E = Edge Node -->
-    <rect x="395" y="60" width="150" height="56" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
-    <text x="470" y="93" fill="#1f2328">Edge Node</text>
+    <rect x="380" y="60" width="180" height="56" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+    <text x="470" y="84" font-weight="600" fill="#1f2328">엣지 노드</text>
+    <text x="470" y="102" font-size="11" fill="#57606a">(Sparkplug Edge)</text>
 
     <!-- B = HiveMQ (retained) -->
-    <rect x="695" y="60" width="150" height="56" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
-    <text x="770" y="84" fill="#1f2328">HiveMQ</text>
-    <text x="770" y="102" font-size="11" fill="#57606a">(retained)</text>
+    <rect x="680" y="60" width="180" height="56" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+    <text x="770" y="84" font-weight="600" fill="#1f2328">HiveMQ 브로커</text>
+    <text x="770" y="102" font-size="11" fill="#57606a">(영속 / Retained)</text>
 
     <!-- C = Consumer -->
-    <rect x="985" y="60" width="150" height="56" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
-    <text x="1060" y="93" fill="#1f2328">Consumer</text>
+    <rect x="970" y="60" width="180" height="56" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+    <text x="1060" y="84" font-weight="600" fill="#1f2328">소비자</text>
+    <text x="1060" y="102" font-size="11" fill="#57606a">(IT / MES / 분석)</text>
   </g>
 </svg>
