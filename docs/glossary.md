@@ -32,7 +32,7 @@ OT 설비에 대한 물리적 쓰기(Write/Command) 제어가 허용되는 물�
 ## 2. 인터페이스 계약 및 데이터 모델 (Interface Contracts & Data Modeling)
 
 ### Sparkplug B 프로토콜
-MQTT 위에서 산업용 토픽 네임스페이스(`spBv1.0/...`), 상태 수명주기(Birth/Death/Data), Protobuf 페이로드 인코딩 및 효율적인 대역폭 압축을 규정하는 산업 표준 사양(Eclipse Tahu 기반)입니다.
+MQTT 위에서 산업용 토픽 네임스페이스(`spBv1.0/...`), 상태 수명주기(Birth/Death/Data), Protobuf 페이로드 인코딩 및 효율적인 대역폭 압축을 규정하는 Eclipse Sparkplug 워킹그룹의 산업 표준 사양입니다. 본 랩은 참조 구현인 Eclipse Tahu 1.0.14를 사용합니다.
 
 ### UDT (User Defined Type, 사용자 정의 타입) / Template
 Sparkplug 사양에서 복합 설비(예: 믹서, 모터, 펌프)의 데이터 구조를 선언하기 위한 템플릿 모델입니다. 정의(Definition)와 인스턴스(Instance)로 분리되며, 멤버 변수 목록, 파라미터 및 타입을 포함합니다.
