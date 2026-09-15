@@ -1,6 +1,7 @@
 # Architecture Decision Records
 
 Format: Context → Decision → Consequences. Every ADR is available in **two languages**: the Korean original (`*.md`, authoritative) and an English translation (`*.en.md`).
+For standardized definitions of domain and governance terms used across these records, see [`docs/glossary.md`](../glossary.md).
 
 | ADR | Topic | KO | EN |
 |-----|-------|----|----|
