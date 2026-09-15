@@ -1,32 +1,41 @@
-# ADR-0001 — Primary Host STATE + store-and-forward, 그리고 다중소비자 모순
+# ADR-0001 — Primary Host STATE 기반 Store-and-Forward 및 다중 소비자 아키텍처 상충 해소
 
 - 상태: **Accepted**
 - 일자: 2026-06-03
-- 근거: 직접 실험 (`src/.../StateStoreForwardDemo.java` + `PrimaryHost`/`SfEdgeNode`), HiveMQ CE
+- 근거: 실증 테스트 (`src/.../StateStoreForwardDemo.java` + `PrimaryHost`/`SfEdgeNode`), HiveMQ CE
 
-## Context
-Sparkplug의 store-and-forward는 **단일 Primary Host** 의 STATE(`spBv1.0/STATE/{hostId}`, JSON online/offline, retained)에 게이트된다. host가 offline이면 edge가 데이터를 버퍼링, online 복귀 시 순서대로 flush → 시스템-of-record가 데이터를 놓치지 않게 한다. 그러나 UNS는 다수의 독립 소비자(MES·historian·분석·ERP) n:m → "primary가 누구냐"가 모순이 된다.
+## 1. 배경 및 맥락 (Context)
+Sparkplug 사양의 Store-and-Forward(S&F) 메커니즘은 **단일 Primary Host**의 생존 상태(`spBv1.0/STATE/{hostId}`, JSON online/offline, Retained)에 연동됩니다. Host가 오프라인으로 전환되면 엣지 노드가 데이터를 로컬 버퍼에 축적하고, 온라인 복귀 시 순서대로 플러시(Flush)하여 정본 기록 시스템(System of Record)의 데이터 결손을 방지합니다. 
 
-## Experiment (실측, 무손실 확인)
-시나리오: host online → edge LIVE(seq1,2) → host OFFLINE(graceful STATE) → edge가 seq3,4,5 **버퍼링**(전달 안 됨) → host 복귀 → edge가 **순서대로 flush** → host가 **seq3,4,5 전부 수신** → LIVE seq6 재개. (exit 0)
+그러나 UNS(Unified Namespace) 환경은 다수의 독립적 소비자(MES, 히스토리안, 실시간 분석 엔진, ERP)가 N:M 구조로 연계되므로, 복수의 소비자 중 어떤 주체를 Primary Host로 지정할 것인가에 대한 아키텍처 상충이 발생합니다.
 
-## Findings — 동시성/순서 결함 2건 (발견→수정)
-이 실험 자체가 두 개의 진짜 동시성 버그를 드러냈고 고쳤다:
+## 2. 실험 및 실측 결과 (Empirical Verification)
+`StateStoreForwardDemo`를 통한 무손실 전송 실증:
+- 시나리오: Host 온라인 → 엣지 LIVE 데이터 발행(seq 1, 2) → Host 정상 오프라인 전환(Graceful STATE offline) → 엣지 노드 데이터 버퍼링(seq 3, 4, 5 미전달 보관) → Host 온라인 복귀 → 엣지 노드 순차 플러시 수행 → Host가 seq 3, 4, 5 정상 수신 확인 → LIVE 데이터 재개(seq 6). (exit code: 0)
 
-1. **flush를 Paho 콜백 스레드에서 publish → 교착.** STATE 콜백(comms 스레드) 안에서 `client.publish`를 돌리니 seq=4에서 영구 hang. **수정:** flush를 별도 스레드에서; 버퍼 스냅샷은 lock 안, 네트워크 publish는 lock 밖.
-2. **소비자가 데이터 구독 전에 STATE online 발행 → flush가 구독을 앞질러 backlog 유실.** 처음엔 seq=3만 도착. **수정:** host가 `spBv1.0/<group>/#` 구독을 **STATE online 발행보다 먼저** → 3·4·5 전부 도착.
+## 3. 식별 및 조치된 결함 (Findings & Mitigations)
+실증 과정에서 동시성 및 순서 제어 결함 2건을 식별하고 해결 방안을 적용하였습니다:
 
-## Decision (거버넌스 — 다중소비자 모순 해소)
-- **store-and-forward는 '단 하나의 시스템-of-record'(보통 historian/UNS 기록계층)를 primary host로 지정**해 그 가용성에만 게이트한다. 그 외 소비자(분석·대시보드 등)는 **best-effort live 구독**으로 두고, 현재상태 복구는 **store-and-forward가 아니라 aware-broker certificates(ADR-0002)** 로 해결한다.
-- **모든 소비자를 primary로 만들려 하지 않는다** — 의미상 모순(edge가 N개 STATE를 동시에 만족시킬 수 없음).
-- 즉 **역할 분리:** primary-host store-and-forward = *기록계층의 완결성*, aware-broker retained cert = *임의 소비자의 현재상태*. 이 분리가 "Sparkplug(n:1) ↔ UNS(n:m)" 간극의 거버넌스 답.
+1. **Paho 콜백 스레드 내 플러시 실행 시 교착 상태(Deadlock) 발생**:
+   - 원인: STATE 수신 콜백(통신 스레드) 내부에서 동기적 `client.publish`를 호출하여 특정 시퀀스(seq=4)에서 상호 블로킹 발생.
+   - 조치: 플러시 처리를 별도 작업 스레드로 격리. 버퍼 스냅샷 추출은 임계 영역(Lock) 내부에서 수행하고, 네트워크 발행은 임계 영역 외부에서 비동기 처리.
+2. **소비자 데이터 구독 전 STATE 온라인 발행으로 인한 백로그 유실**:
+   - 원인: 소비자가 토픽을 구독하기 전에 STATE online을 선제 발행하여, 엣지의 고속 플러시가 구독 체결을 앞질러 초기 백로그가 유실됨.
+   - 조치: Host가 `spBv1.0/<group>/#` 토픽 구독을 완료한 후 STATE online을 발행하도록 순서 보장.
 
-## Consequences
-- **primary host 정체성 = 거버넌스 결정.** edge 설정이 단일 `primaryHostId`에 바인딩됨 → 누구를 기록계층으로 둘지 명문화(namespace-standard §8).
-- 다중소비자 현재상태는 ADR-0002(aware broker)에 의존.
-- **flush QoS 선택**(0 vs 1)은 완결성 트레이드오프 — 기록계층 완결성이 중요하면 flush를 QoS1 + persistent buffer로.
-- 코드 교훈: Paho 콜백에서 publish 금지(스냅샷-후-별도스레드), 소비자는 "구독 후 online 선언".
+## 4. 아키텍처 결정 (Decision)
+- **Store-and-Forward 대상 단일화**: 단 하나의 정본 기록 시스템(일반적으로 히스토리안 또는 UNS 영속 기록 계층)만을 Primary Host로 지정하여 해당 가용성에 연동합니다.
+- **다중 소비자 상태 동기화 분리**: 일반 분석/대시보드 소비자는 최선 노력(Best-effort) 실시간 구독으로 운용하며, 초기 상태 복구는 Store-and-Forward가 아닌 브로커 상태 증명(Aware Broker Certificates, ADR-0002)을 활용합니다.
+- **역할 및 책임 명확화**:
+  - Primary Host Store-and-Forward: 기록 계층 데이터의 완결성(Completeness) 보장.
+  - Aware-Broker Retained Certificate: 임의 소비자의 최신 상태(Current State) 즉시 동기화.
+  이 분리 설계를 통해 Sparkplug의 1:N 구조와 UNS의 N:M 분산 구독 구조 간의 상충을 해소합니다.
 
-## Links
-- 코드: `../../src/main/java/dev/krillin/sparkplug/{PrimaryHost,SfEdgeNode,StateStoreForwardDemo}.java`
-- ADR-0002(late-joiner)와 한 뿌리
+## 5. 결과 및 영향 (Consequences)
+- **Primary Host 지정 거버넌스화**: 엣지 설정이 단일 `primaryHostId`에 바인딩되므로, 어떤 계층을 정본 기록 시스템으로 운용할지 네임스페이스 표준(`namespace-standard.md` §8)에 명문화합니다.
+- **다중 소비자 상태 복구**: 임의 시점 접속 소비자의 상태 동기화는 ADR-0002(Aware Broker) 사양에 의존합니다.
+- **플러시 QoS 트레이드오프**: 기록 완결성이 엄격히 요구되는 경우 플러시 전송을 QoS 1 및 영속 디스크 버퍼로 구성합니다.
+
+## 6. 관련 자산 및 링크
+- 소스 코드: `src/main/java/dev/krillin/sparkplug/{PrimaryHost,SfEdgeNode,StateStoreForwardDemo}.java`
+- 연계 ADR: ADR-0002 (Late Joiner 상태 동기화)
