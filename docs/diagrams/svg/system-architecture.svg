@@ -40,13 +40,13 @@
 
   <!-- edge labels (no chips, beside lines) -->
   <g font-size="11">
-    <text x="232" y="150" fill="#57606a">정의 제안</text>
+    <text x="232" y="150" fill="#57606a">UDT 모델 제안</text>
     <text x="580" y="256" fill="#0969da">정책 · 활성 버전 · 적합성 검증</text>
     <text x="300" y="356" fill="#9a6700">NCMD 1500</text>
     <text x="670" y="334" fill="#9a6700">제어 명령</text>
     <text x="1030" y="328" fill="#9a6700">APPLY</text>
     <text x="830" y="480" fill="#57606a">NDATA 텔레메트리 관측</text>
-    <text x="496" y="492" fill="#57606a">RBE 발행</text>
+    <text x="496" y="492" fill="#57606a">RBE 텔레메트리</text>
     <text x="628" y="564" fill="#57606a">→ UNS</text>
     <text x="350" y="700" fill="#57606a">observe → command — 관측 데이터 기반 제어 피드백 루프 완결</text>
   </g>
