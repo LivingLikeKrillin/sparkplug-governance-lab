@@ -62,7 +62,8 @@ flowchart TB
 - **구현 제약 사항**: 본 PoC에서 브로커 ACL은 산출물 프로젝션 및 정적 검증에 집중하며, 명령 감사 로그는 구조화된 콘솔 로그 형태로 출력됩니다 (영속 분산 원장은 Bifrost 계층으로 발전).
 
 ## 6. 관련 자산 및 링크
-- 소스 코드: `src/main/java/dev/krillin/sparkplug/acl/`
-- 데모 애플리케이션: `src/main/java/dev/krillin/sparkplug/CommandAclDemo.java`
+- 소스 코드: [bifrost](https://github.com/yggdrasil-iiot/bifrost)로 이관됨(`0b9b1ae`, 2026-07-08) — 현재 [`core/acl/`](https://github.com/yggdrasil-iiot/bifrost/tree/main/core/src/main/java/dev/krillin/bifrost/core/acl), 이관 직전 스냅샷 [`39152a9` `acl/`](https://github.com/LivingLikeKrillin/sparkplug-governance-lab/tree/39152a9f26ac8bbf9d53ac6d10853a0ae2d8663c/src/main/java/dev/krillin/sparkplug/acl)
+- CI 게이트: bifrost [`gates/PolicyGate.java`](https://github.com/yggdrasil-iiot/bifrost/blob/main/gates/src/main/java/dev/krillin/bifrost/gates/PolicyGate.java)(구 `CommandPolicyGate`)
+- 데모 애플리케이션: 스냅샷 [`CommandAclDemo.java`](https://github.com/LivingLikeKrillin/sparkplug-governance-lab/blob/39152a9f26ac8bbf9d53ac6d10853a0ae2d8663c/src/main/java/dev/krillin/sparkplug/CommandAclDemo.java) — 실행 방법은 [README › 이관된 데모 실행](../../README.md#running)
 - 정책 파일: `registry/command-policy.json`
 - 연계 문서: ADR-0006 (식별자 유일성), ADR-0007 (스키마 게이트), `namespace-standard.md` §7

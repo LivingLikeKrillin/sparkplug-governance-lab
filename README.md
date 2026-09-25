@@ -150,6 +150,20 @@ mvn -q exec:java -Dexec.mainClass=dev.krillin.sparkplug.DriftMonitorDemo
 > mvn -q exec:java -Dexec.mainClass=dev.krillin.sparkplug.opcua.OpcUaUdtBridgeDemo
 > ```
 
+<a id="running"></a>
+
+### 이관된 데모 실행 (`CommandAclDemo`, `SchemaGateDemo`)
+명령 인가·스키마 게이트 로직이 [bifrost](https://github.com/yggdrasil-iiot/bifrost)로 이관되면서(`0b9b1ae`, 2026-07-08) 두 데모는 이 저장소의 `main`에서 빠졌습니다. [eclipse-sparkplug/sparkplug#600](https://github.com/eclipse-sparkplug/sparkplug/issues/600) 댓글이 가리키는 `CommandAclDemo`는 이관 직전 스냅샷 [`39152a9`](https://github.com/LivingLikeKrillin/sparkplug-governance-lab/tree/39152a9f26ac8bbf9d53ac6d10853a0ae2d8663c)에서 그대로 실행할 수 있습니다:
+
+```bash
+git checkout 39152a9
+docker compose up -d hivemq-ce
+mvn -q compile exec:java -Dexec.mainClass=dev.krillin.sparkplug.CommandAclDemo   # 명령 인가(브로커 ACL이 막지 못하는 경우 포함)
+mvn -q compile exec:java -Dexec.mainClass=dev.krillin.sparkplug.SchemaGateDemo   # 레지스트리 + 호환성 게이트(브로커 불필요)
+```
+
+현재 구현은 bifrost의 [`core/acl`](https://github.com/yggdrasil-iiot/bifrost/tree/main/core/src/main/java/dev/krillin/bifrost/core/acl)(인가 엔진), [`gates/PolicyGate`](https://github.com/yggdrasil-iiot/bifrost/blob/main/gates/src/main/java/dev/krillin/bifrost/gates/PolicyGate.java)(CI 게이트, 구 `CommandPolicyGate`), [`gates/SchemaGate`](https://github.com/yggdrasil-iiot/bifrost/blob/main/gates/src/main/java/dev/krillin/bifrost/gates/SchemaGate.java)에 있습니다.
+
 ---
 
 ## 7. 엔지니어링 표준 문서 체계 (Documentation Suite)
