@@ -64,9 +64,11 @@ The `CommandAuthorizer` above only sees the request (command / target / value / 
 
 ## Links
 
-- Code: [`src/main/java/dev/krillin/sparkplug/acl/`](../../src/main/java/dev/krillin/sparkplug/acl/)
-- Shell: [`src/main/java/dev/krillin/sparkplug/GuardedEdgeNode.java`](../../src/main/java/dev/krillin/sparkplug/GuardedEdgeNode.java)
-- CI gate: [`src/main/java/dev/krillin/sparkplug/acl/CommandPolicyGate.java`](../../src/main/java/dev/krillin/sparkplug/acl/CommandPolicyGate.java)
-- Demo: [`src/main/java/dev/krillin/sparkplug/CommandAclDemo.java`](../../src/main/java/dev/krillin/sparkplug/CommandAclDemo.java)
+> The command-authorization code was extracted to [bifrost](https://github.com/yggdrasil-iiot/bifrost) in `0b9b1ae` (2026-07-08). Each link below points to the current location and to the pre-extraction snapshot [`39152a9`](https://github.com/LivingLikeKrillin/sparkplug-governance-lab/tree/39152a9f26ac8bbf9d53ac6d10853a0ae2d8663c) that this ADR was written against.
+
+- Code: bifrost [`core/acl/`](https://github.com/yggdrasil-iiot/bifrost/tree/main/core/src/main/java/dev/krillin/bifrost/core/acl) · snapshot [`acl/`](https://github.com/LivingLikeKrillin/sparkplug-governance-lab/tree/39152a9f26ac8bbf9d53ac6d10853a0ae2d8663c/src/main/java/dev/krillin/sparkplug/acl)
+- Shell: snapshot [`GuardedEdgeNode.java`](https://github.com/LivingLikeKrillin/sparkplug-governance-lab/blob/39152a9f26ac8bbf9d53ac6d10853a0ae2d8663c/src/main/java/dev/krillin/sparkplug/GuardedEdgeNode.java) (edge enforcement now lives in bifrost [`heimdall/`](https://github.com/yggdrasil-iiot/bifrost/tree/main/heimdall))
+- CI gate: bifrost [`gates/PolicyGate.java`](https://github.com/yggdrasil-iiot/bifrost/blob/main/gates/src/main/java/dev/krillin/bifrost/gates/PolicyGate.java) (renamed from `CommandPolicyGate`) · snapshot [`CommandPolicyGate.java`](https://github.com/LivingLikeKrillin/sparkplug-governance-lab/blob/39152a9f26ac8bbf9d53ac6d10853a0ae2d8663c/src/main/java/dev/krillin/sparkplug/acl/CommandPolicyGate.java)
+- Demo: snapshot [`CommandAclDemo.java`](https://github.com/LivingLikeKrillin/sparkplug-governance-lab/blob/39152a9f26ac8bbf9d53ac6d10853a0ae2d8663c/src/main/java/dev/krillin/sparkplug/CommandAclDemo.java) — how to run it: [README › Running](../../README.md#running)
 - Policy: [`registry/command-policy.json`](../../registry/command-policy.json)
 - Related: ADR-0007 (schema gate), ADR-0006 (edge-id uniqueness), [namespace-standard §7](../namespace-standard.en.md)

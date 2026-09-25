@@ -23,7 +23,8 @@ ADR-0005 decided "govern UDTs with an external registry + SemVer + a CI gate", b
 
 ## Links
 
-- Code: [`src/main/java/dev/krillin/sparkplug/schema/`](../../src/main/java/dev/krillin/sparkplug/schema/)
-- Demo: [`src/main/java/dev/krillin/sparkplug/SchemaGateDemo.java`](../../src/main/java/dev/krillin/sparkplug/SchemaGateDemo.java)
+- Code (registry value types, still here): [`src/main/java/dev/krillin/sparkplug/schema/`](../../src/main/java/dev/krillin/sparkplug/schema/)
+- Gate (extracted to bifrost in `0b9b1ae`): bifrost [`gates/SchemaGate.java`](https://github.com/yggdrasil-iiot/bifrost/blob/main/gates/src/main/java/dev/krillin/bifrost/gates/SchemaGate.java) · [`core/schema/CompatibilityChecker.java`](https://github.com/yggdrasil-iiot/bifrost/blob/main/core/src/main/java/dev/krillin/bifrost/core/schema/CompatibilityChecker.java)
+- Demo: pre-extraction snapshot [`SchemaGateDemo.java`](https://github.com/LivingLikeKrillin/sparkplug-governance-lab/blob/39152a9f26ac8bbf9d53ac6d10853a0ae2d8663c/src/main/java/dev/krillin/sparkplug/SchemaGateDemo.java) — how to run it: [README › Running](../../README.md#running)
 - Registry: [`registry/`](../../registry/)
 - Prior: ADR-0005

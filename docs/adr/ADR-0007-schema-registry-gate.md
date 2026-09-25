@@ -31,7 +31,8 @@ ADR-0005에서는 외부 스키마 레지스트리, 유의적 버전 관리(SemV
 - **한계점 (PoC 범위)**: 파일 시스템 기반 단일 저장소를 사용하며, 자동 데이터 마이그레이션 도구는 본 모듈 범위에 포함되지 않습니다 (런타임 드리프트 탐지는 ADR-0012에서 별도 취급).
 
 ## 4. 관련 자산 및 링크
-- 소스 코드: `src/main/java/dev/krillin/sparkplug/schema/`
-- 라이브 데모: `src/main/java/dev/krillin/sparkplug/SchemaGateDemo.java`
+- 소스 코드(레지스트리 값 타입, 이 저장소에 유지): [`src/main/java/dev/krillin/sparkplug/schema/`](../../src/main/java/dev/krillin/sparkplug/schema/)
+- 게이트(`0b9b1ae`에서 bifrost로 이관): [`gates/SchemaGate.java`](https://github.com/yggdrasil-iiot/bifrost/blob/main/gates/src/main/java/dev/krillin/bifrost/gates/SchemaGate.java) · [`core/schema/CompatibilityChecker.java`](https://github.com/yggdrasil-iiot/bifrost/blob/main/core/src/main/java/dev/krillin/bifrost/core/schema/CompatibilityChecker.java)
+- 라이브 데모: 이관 직전 스냅샷 [`SchemaGateDemo.java`](https://github.com/LivingLikeKrillin/sparkplug-governance-lab/blob/39152a9f26ac8bbf9d53ac6d10853a0ae2d8663c/src/main/java/dev/krillin/sparkplug/SchemaGateDemo.java) — 실행 방법은 [README › 이관된 데모 실행](../../README.md#running)
 - 레지스트리 정의: `registry/`
 - 연계 ADR: ADR-0005 (UDT 버전 관리), ADR-0010 (OPC UA to UDT 사상)
