@@ -8,7 +8,7 @@
 
 **Tech Stack:** Java 17, Maven multi-module, Eclipse Tahu (Sparkplug), Eclipse Milo 1.0.0 (OPC-UA client), Chicory `wasm` 1.4.0 (OPA-WASM in-JVM), Jackson 2.17.2, Logback 1.3.14, JUnit 5. New: `maven-shade-plugin` for runnable jars (the lab runs via `exec:java`; the daemon/CLIs need standalone jars).
 
-**Source of moved code:** `sparkplug-governance-lab` at `C:\Users\Eisen\Desktop\Labs\[iiot]\sparkplug-governance-lab` (packages `dev.krillin.sparkplug.{acl,acl.opa,schema,bridge}`). **New package root:** `dev.krillin.bifrost` → `.core.acl` / `.core.acl.opa` / `.core.schema` (from lab `acl`/`acl.opa`/`schema`), `.heimdall` (from lab `bridge`), `.gates` (the CLI entrypoints).
+**Source of moved code:** `sparkplug-governance-lab` at `<workspace>\sparkplug-governance-lab` (packages `dev.krillin.sparkplug.{acl,acl.opa,schema,bridge}`). **New package root:** `dev.krillin.bifrost` → `.core.acl` / `.core.acl.opa` / `.core.schema` (from lab `acl`/`acl.opa`/`schema`), `.heimdall` (from lab `bridge`), `.gates` (the CLI entrypoints).
 
 **Repo policy:** `bifrost` is a NEW git repo (public, Apache-2.0), created locally first; push/PR/publish are Eisen-gated. All commits below are local. Do NOT push without explicit OK.
 
@@ -56,7 +56,7 @@ Lab after reconciliation keeps its own copies of the `schema/` value types + `De
 ### Task 1: Create the repo skeleton + parent POM
 
 **Files:**
-- Create: `bifrost/` (new dir at `C:\Users\Eisen\Desktop\Labs\[iiot]\bifrost`), `bifrost/pom.xml`, `bifrost/LICENSE`, `bifrost/README.md`, `bifrost/.gitignore`
+- Create: `bifrost/` (new dir at `<workspace>\bifrost`), `bifrost/pom.xml`, `bifrost/LICENSE`, `bifrost/README.md`, `bifrost/.gitignore`
 
 - [ ] **Step 1:** `mkdir bifrost && cd bifrost && git init`. Add `.gitignore` (target/, *.class, .idea/, node_modules/). Add `LICENSE` = Apache-2.0 full text. `README.md` = one paragraph: "Bifrost — a governance product for the IT↔OT boundary: schema-compat, deny-by-default command authz, and version provenance, as CI gates + a runtime write-boundary daemon (Heimdall). Consumers integrate via a published data/wire contract, never shared code."
 - [ ] **Step 2:** Write parent `pom.xml`: `<groupId>dev.krillin.bifrost</groupId>`, `<artifactId>bifrost-parent</artifactId>`, `<version>0.1.0-SNAPSHOT</version>`, `<packaging>pom</packaging>`, `<modules>core,heimdall,gates</modules>`. Set `<maven.compiler.release>17</maven.compiler.release>`. Put shared versions in `<properties>` (tahu, milo=1.0.0, jackson=2.17.2, chicory=1.4.0, logback=1.3.14, junit) and a `<dependencyManagement>` block pinning them (copy exact coordinates from the lab `pom.xml`). Add `<pluginManagement>` for `maven-surefire-plugin` and `maven-shade-plugin`.

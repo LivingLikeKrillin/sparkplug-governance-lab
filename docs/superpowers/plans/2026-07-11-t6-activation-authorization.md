@@ -58,7 +58,7 @@ Self-contained: the value types, the pure evaluator, and the loader. No wiring i
 
 Run:
 ```bash
-cd "C:/Users/Eisen/Desktop/Labs/[iiot]/bifrost"
+cd "<workspace>/bifrost"
 git checkout main && git checkout -b feat/t6-activation-authz
 ```
 Expected: `Switched to a new branch 'feat/t6-activation-authz'`.

@@ -1,7 +1,7 @@
 [LINEAGE] step 0: build jars if missing (core, sim, gates, heimdall)
-[LINEAGE] gates=C:/Users/Eisen/Desktop/Labs/[iiot]/bifrost/gates/target/bifrost-gates.jar
-[LINEAGE] heimdall=C:/Users/Eisen/Desktop/Labs/[iiot]/bifrost/heimdall/target/bifrost-heimdall.jar
-[LINEAGE] sim=C:/Users/Eisen/Desktop/Labs/[iiot]/bifrost/sim/target/bifrost-sim.jar
+[LINEAGE] gates=<workspace>/bifrost/gates/target/bifrost-gates.jar
+[LINEAGE] heimdall=<workspace>/bifrost/heimdall/target/bifrost-heimdall.jar
+[LINEAGE] sim=<workspace>/bifrost/sim/target/bifrost-sim.jar
 [LINEAGE] step 1: stage the governed registry (udt + recipe conformance + spec 1.0.0/1.1.0 + policy)
 [LINEAGE] ===== LN1: chain intact + audited (pure CLI, no broker) =====
 [GATE] activated target=Line1 kind=recipe ref=mix-recipe version=1.0.0 action=ACTIVATE by=alice approvedBy=bob sha256=9a9d76c37b911d8e3055fe0549dfb06478fbab0134053bbb2ccf55f31d6ceb98

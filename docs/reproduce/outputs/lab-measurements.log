@@ -8,10 +8,10 @@
 01:53:48,302 |-INFO in ch.qos.logback.classic.util.ContextInitializer@4b86805d - Trying to configure with ch.qos.logback.classic.util.DefaultJoranConfigurator
 01:53:48,303 |-INFO in ch.qos.logback.classic.util.ContextInitializer@4b86805d - Constructed configurator of type class ch.qos.logback.classic.util.DefaultJoranConfigurator
 01:53:48,304 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Could NOT find resource [logback-test.xml]
-01:53:48,304 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Found resource [logback.xml] at [file:/C:/Users/Eisen/Desktop/Labs/%5Biiot%5D/sparkplug-governance-lab/target/classes/logback.xml]
+01:53:48,304 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Found resource [logback.xml] at [file:/<workspace>/sparkplug-governance-lab/target/classes/logback.xml]
 01:53:48,305 |-WARN in ch.qos.logback.classic.util.DefaultJoranConfigurator@5852c06f - Resource [logback.xml] occurs multiple times on the classpath.
-01:53:48,305 |-WARN in ch.qos.logback.classic.util.DefaultJoranConfigurator@5852c06f - Resource [logback.xml] occurs at [jar:file:/C:/Users/Eisen/.m2/repository/org/eclipse/tahu/tahu-core/1.0.14/tahu-core-1.0.14.jar!/logback.xml]
-01:53:48,305 |-WARN in ch.qos.logback.classic.util.DefaultJoranConfigurator@5852c06f - Resource [logback.xml] occurs at [file:/C:/Users/Eisen/Desktop/Labs/%5Biiot%5D/sparkplug-governance-lab/target/classes/logback.xml]
+01:53:48,305 |-WARN in ch.qos.logback.classic.util.DefaultJoranConfigurator@5852c06f - Resource [logback.xml] occurs at [jar:file:/~/.m2/repository/org/eclipse/tahu/tahu-core/1.0.14/tahu-core-1.0.14.jar!/logback.xml]
+01:53:48,305 |-WARN in ch.qos.logback.classic.util.DefaultJoranConfigurator@5852c06f - Resource [logback.xml] occurs at [file:/<workspace>/sparkplug-governance-lab/target/classes/logback.xml]
 01:53:48,509 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [STDOUT]
 01:53:48,509 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.ConsoleAppender]
 01:53:48,525 |-INFO in ch.qos.logback.core.model.processor.ImplicitModelHandler - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property

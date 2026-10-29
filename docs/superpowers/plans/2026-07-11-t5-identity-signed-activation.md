@@ -65,7 +65,7 @@ Self-contained: `Ed25519Keys`, `AuthorizedKey`/`AuthorizedKeys`. No dependency o
 
 Run:
 ```bash
-cd "C:/Users/Eisen/Desktop/Labs/[iiot]/bifrost"
+cd "<workspace>/bifrost"
 git checkout main && git checkout -b feat/t5-identity
 ```
 Expected: `Switched to a new branch 'feat/t5-identity'`.

@@ -12,9 +12,9 @@
 
 **Honest scope reminder (do not over-build):** No real PLCs, no HA cluster, no load test, no true off-box remote. Two sim-sites on localhost. The gate output must *state* that F5's un-rewritability is topological, not proven.
 
-**Repo paths in this plan:** all `bifrost/…` paths are under `C:\Users\Eisen\Desktop\Labs\[iiot]\bifrost`. All `lab/…` paths are under `C:\Users\Eisen\Desktop\Labs\[iiot]\sparkplug-governance-lab`.
+**Repo paths in this plan:** all `bifrost/…` paths are under `<workspace>\bifrost`. All `lab/…` paths are under `<workspace>\sparkplug-governance-lab`.
 
-**Shell cwd note:** the Bash tool's cwd resets to the bifrost dir between calls. The `cd bifrost && …` / `cd "sparkplug-governance-lab" && …` in the steps below assume the `[iiot]` monorepo parent as the base — if a call starts from inside `bifrost`, use the absolute repo path instead (`cd "C:/Users/Eisen/Desktop/Labs/[iiot]/bifrost"` / `.../sparkplug-governance-lab`). Establish the base explicitly per call; do not chain `cd` across calls.
+**Shell cwd note:** the Bash tool's cwd resets to the bifrost dir between calls. The `cd bifrost && …` / `cd "sparkplug-governance-lab" && …` in the steps below assume the `<workspace>` parent as the base — if a call starts from inside `bifrost`, use the absolute repo path instead (`cd "<workspace>/bifrost"` / `.../sparkplug-governance-lab`). Establish the base explicitly per call; do not chain `cd` across calls.
 
 ---
 

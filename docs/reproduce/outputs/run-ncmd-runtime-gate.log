@@ -1,7 +1,7 @@
 [GATE] step 0: build jars if missing
-[GATE] heimdall=C:/Users/Eisen/Desktop/Labs/[iiot]/bifrost/heimdall/target/bifrost-heimdall.jar
-[GATE] sim=C:/Users/Eisen/Desktop/Labs/[iiot]/bifrost/sim/target/bifrost-sim.jar
-[GATE] policy=C:/Users/Eisen/Desktop/Labs/[iiot]/bifrost/heimdall/registry/policy.json
+[GATE] heimdall=<workspace>/bifrost/heimdall/target/bifrost-heimdall.jar
+[GATE] sim=<workspace>/bifrost/sim/target/bifrost-sim.jar
+[GATE] policy=<workspace>/bifrost/heimdall/registry/policy.json
 [GATE] step 1: start HiveMQ CE (broker) + wait for :1883
 [GATE] HiveMQ CE up on :1883
 [GATE] step 2: start the embedded OPC-UA sim
