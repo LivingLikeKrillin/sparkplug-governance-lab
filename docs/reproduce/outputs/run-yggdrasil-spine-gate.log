@@ -1,8 +1,8 @@
 [GATE] step 1: preflight + build (all four jars)
-[GATE] gates=C:/Users/Eisen/Desktop/Labs/[iiot]/bifrost/gates/target/bifrost-gates.jar
-[GATE] sim=C:/Users/Eisen/Desktop/Labs/[iiot]/bifrost/sim/target/bifrost-sim.jar
-[GATE] mimir=C:/Users/Eisen/Desktop/Labs/[iiot]/mimir/target/mimir.jar
-[GATE] muninn=C:/Users/Eisen/Desktop/Labs/[iiot]/muninn/target/muninn.jar
+[GATE] gates=<workspace>/bifrost/gates/target/bifrost-gates.jar
+[GATE] sim=<workspace>/bifrost/sim/target/bifrost-sim.jar
+[GATE] mimir=<workspace>/mimir/target/mimir.jar
+[GATE] muninn=<workspace>/muninn/target/muninn.jar
 [GATE] step 2: start HiveMQ CE (broker) + wait for :1883, then the OPC-UA sim
 [GATE] HiveMQ CE up on :1883
 [GATE] OPC-UA sim listening (pid 51282)
@@ -10,7 +10,7 @@
 SLF4J(W): No SLF4J providers were found.
 SLF4J(W): Defaulting to no-operation (NOP) logger implementation
 SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
-[MIMIR] derived Line1-Mixer@1.0.0 members=4 -> C:/Users/Eisen/Desktop/Labs/[iiot]/bifrost/build/gate/def.json
+[MIMIR] derived Line1-Mixer@1.0.0 members=4 -> <workspace>/bifrost/build/gate/def.json
 [MIMIR]   Rpm : Double range=[0.0, 3000.0]
 [MIMIR]   Temp : Double range=[0.0, 450.0]
 [MIMIR]   Running : Boolean range=null
@@ -30,7 +30,7 @@ SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
 SLF4J(W): No SLF4J providers were found.
 SLF4J(W): Defaulting to no-operation (NOP) logger implementation
 SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
-[MIMIR] derived Line1-Mixer@1.1.0 members=3 -> C:/Users/Eisen/Desktop/Labs/[iiot]/bifrost/build/gate/def-breaking.json
+[MIMIR] derived Line1-Mixer@1.1.0 members=3 -> <workspace>/bifrost/build/gate/def-breaking.json
 [MIMIR]   Rpm : Double range=[0.0, 3000.0]
 [MIMIR]   Temp : Double range=[0.0, 450.0]
 [MIMIR]   Secret : Double range=null

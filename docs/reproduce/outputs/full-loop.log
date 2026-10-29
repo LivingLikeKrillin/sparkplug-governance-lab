@@ -6,7 +6,7 @@
 SLF4J(W): No SLF4J providers were found.
 SLF4J(W): Defaulting to no-operation (NOP) logger implementation
 SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
-[MIMIR] derived Line1-Mixer@1.0.0 members=4 -> C:/Users/Eisen/Desktop/Labs/[iiot]/bifrost/build/loopgate/def.json
+[MIMIR] derived Line1-Mixer@1.0.0 members=4 -> <workspace>/bifrost/build/loopgate/def.json
 [MIMIR]   Rpm : Double range=[0.0, 3000.0]
 [MIMIR]   Temp : Double range=[0.0, 450.0]
 [MIMIR]   Running : Boolean range=null

@@ -8,8 +8,8 @@ taken verbatim from the real gate script and one captured run; nothing is invent
 - Captured reference output: `sparkplug-governance-lab/docs/reproduce/outputs/run-composable-conformance-gate.log`
 
 > Repository layout assumed by this doc: the lab (`sparkplug-governance-lab`) and the runnable
-> product (`bifrost`) are **sibling** directories, e.g. `…/Labs/[iiot]/bifrost` and
-> `…/Labs/[iiot]/sparkplug-governance-lab`. The lab is a PoC-stage consumer of the external
+> product (`bifrost`) are **sibling** directories, e.g. `<workspace>/bifrost` and
+> `<workspace>/sparkplug-governance-lab`. The lab is a PoC-stage consumer of the external
 > Bifrost / Yggdrasil governance; **all runnable code lives in `bifrost`**, which is where you run
 > the gate.
 
@@ -209,9 +209,9 @@ in the captured log — that is a console-encoding artifact, not a failure.
 
 ```
 [GATE] step 0: build jars if missing (core, sim, gates, heimdall)
-[GATE] heimdall=C:/Users/Eisen/Desktop/Labs/[iiot]/bifrost/heimdall/target/bifrost-heimdall.jar
-[GATE] sim=C:/Users/Eisen/Desktop/Labs/[iiot]/bifrost/sim/target/bifrost-sim.jar
-[GATE] gates=C:/Users/Eisen/Desktop/Labs/[iiot]/bifrost/gates/target/bifrost-gates.jar
+[GATE] heimdall=<workspace>/bifrost/heimdall/target/bifrost-heimdall.jar
+[GATE] sim=<workspace>/bifrost/sim/target/bifrost-sim.jar
+[GATE] gates=<workspace>/bifrost/gates/target/bifrost-gates.jar
 [GATE] step 1: start HiveMQ CE (broker) + wait for :1883
 [GATE] HiveMQ CE up on :1883
 [GATE] step 2: set up the work registry (copy governed fixtures) + start the OPC-UA sim

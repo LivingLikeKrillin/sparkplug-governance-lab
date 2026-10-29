@@ -163,7 +163,7 @@ annotated with what it mutated, which `identity.*` code it must produce, and whi
 
 ```text
 [ANCHORED] step 0: build the identity-aware gates jar (core+gates)
-[ANCHORED] gates=C:/Users/Eisen/Desktop/Labs/[iiot]/bifrost/gates/target/bifrost-gates.jar
+[ANCHORED] gates=<workspace>/bifrost/gates/target/bifrost-gates.jar
 [ANCHORED] step 1: keygen alice/bob + build the canonical authorized-keys.jsonl
 [ANCHORED] keys ready (alice activator, bob approver — both registered)
 ```
