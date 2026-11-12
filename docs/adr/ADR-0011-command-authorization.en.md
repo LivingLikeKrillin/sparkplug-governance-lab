@@ -1,0 +1,76 @@
+# ADR-0011 — NCMD command authorization / layered policy-as-code (English translation)
+
+- Status: **Accepted**
+- Date: 2026-06-11
+- Relations: reuses the fail-closed CLI pattern of the schema gate (ADR-0007); divides identity responsibility with edge-id uniqueness (ADR-0006). Legacy code: [`acl/`](../../legacy/pre-bifrost/src/main/java/yggdrasil/sparkplug/legacy/acl/), demo [`CommandAclDemo.java`](../../legacy/pre-bifrost/src/main/java/yggdrasil/sparkplug/legacy/CommandAclDemo.java); current implementation: [Bifrost](https://github.com/yggdrasil-iiot/bifrost). *(Original Korean: [ADR-0011-command-authorization.md](ADR-0011-command-authorization.md))*
+
+## Context
+
+As specified, NCMD is **wide open**. Any client that can publish to `spBv1.0/{group}/NCMD/{edge}` can issue commands, and a naive edge node executes whatever arrives, unauthenticated and unauthorized. Extended to OT writeback (setpoints etc.) this means "anyone can write any value to equipment" — a safety and governance hole. This relates directly to the question raised in [eclipse-sparkplug/sparkplug#600](https://github.com/eclipse-sparkplug/sparkplug/issues/600) (command authorization, including what role a Sparkplug Aware MQTT Server could play).
+
+## Decision
+
+**Key observation:** the NCMD topic `spBv1.0/{group}/NCMD/{edge}` carries **no command name**. Rebirth, Reboot, and Setpoint all arrive on the same topic; command identity lives in the payload metrics. Consequences:
+
+- A standard broker **topic ACL is structurally incapable of per-command authorization** — it can only enforce *node-level reachability* (who may command this node at all), all-or-nothing.
+- Per-command and per-value authorization requires payload visibility, which exists at the **edge** (or in a broker that decodes Sparkplug payloads, i.e. a Sparkplug Aware server — at a cost).
+- The two enforcement layers therefore cannot substitute for each other; they answer different questions.
+
+```mermaid
+flowchart TB
+    PUB["Command publisher (any MQTT client)"]
+    subgraph BRK["MQTT broker - sees the TOPIC only"]
+        ACL["Topic ACL (node-level, all-or-nothing)"]
+    end
+    subgraph EDGE["Edge node - sees the PAYLOAD"]
+        AUTH["CommandAuthorizer (allowlist + value range + type, deny-by-default)"]
+        EXEC["execute (ALLOW only)"]
+    end
+    subgraph POL["Single policy source"]
+        GATE["CI lint gate (fail-closed)"]
+        P[("command-policy.json (deny-by-default)")]
+        PROJ["BrokerAclProjector"]
+    end
+    PUB -->|"PUBLISH NCMD - topic carries no command name"| ACL
+    ACL -->|"payload passes through - broker cannot inspect metrics"| AUTH
+    AUTH -->|ALLOW| EXEC
+    GATE -->|lint| P
+    P --> PROJ
+    PROJ -->|"projected ACL: identity to node"| ACL
+    P -->|"loaded at edge: per-command / per-value"| AUTH
+```
+
+We project a **single policy source** (`legacy/pre-bifrost/registry/command-policy.json` for the runnable copy, deny-by-default) onto two enforcement points plus one CI gate:
+
+1. **Edge layer = payload → command & value.** `CommandAuthorizer` (pure logic) checks every received command *before* execution against the policy — command allowlist + value range (inclusive min/max) + type match + target match, **first-match, deny-by-default (fail-closed)**: null values, non-numeric values where a range is declared, and type mismatches all DENY. `GuardedEdgeNode` executes only ALLOW decisions.
+2. **Broker layer = identity → node reachability.** `BrokerAclProjector` (pure logic) renders the policy into a portable broker-ACL artifact (principal → PUBLISH permission on NCMD topics; the policy's `*` becomes MQTT's single-level wildcard `+`). *This is an artifact for broker configuration — not live enforcement in this PoC.*
+3. **CI gate.** `CommandPolicyGate` (a sibling of `SchemaGate`) lints the policy shift-left: default must be deny, no duplicate rule ids, no meaningless constraints, flags over-broad `*` grants, rejects unknown fields. Violations exit non-zero; parse/IO errors exit 2 (**fail-closed** — an unreadable policy never passes).
+
+## Consequences
+
+- Command authorization is actually enforced outside the protocol: one policy source projects consistently to edge runtime, broker configuration, and CI. The live demo proves the structural point: a value-range violation (`Rpm=99999`, correct topic, correct command name) **cannot be blocked by any broker topic ACL** and is denied at the edge.
+- **Limitations / honesty (PoC):** the broker ACL side is projection + validation only (no live RBAC wired up — actual enforcement is the broker's responsibility). Publisher **identity is the broker/MQTT-auth layer's responsibility**; the edge is principal-independent (no re-authentication, no cryptographic command signing — signing is production hardening). Note: the `principal` fields in `command-policy.json` exist **only** to generate broker ACL entries — the edge authorizer never matches on principal. Audit goes to structured console logs only. Single policy file, PoC scale. Discrete allowed-value sets (`oneOf`) are out of scope for v1 (numeric min/max suffices).
+- Same policy-as-code + fail-closed CLI shape as the data-contract gate (ADR-0007) — data-contract governance and command governance are isomorphic. The command permission matrix sits on top of the stable node identity guaranteed by ADR-0006.
+
+## Extension: OPA/Rego + in-JVM WASM evaluation (context-conditional authorization)
+
+This section records the pre-extraction design and verification. The lab no longer runs the retired policy-wasm CI job; current governance development lives in Bifrost, and the historical implementation is retained in the legacy module.
+
+The `CommandAuthorizer` above only sees the request (command / target / value / type). It is **structurally** incapable of context-conditional authorization — "is it currently day shift", "what state is the equipment in right now" — because it is a pure allowlist matching only request fields. Once authorization needs to depend on context (a high-RPM setpoint allowed only on day shift; `SafeHold` allowed only from `Execute` state), the decision has to move to a rule engine.
+
+- **Decision.** Externalize the command-authorization *decision* to an OPA/Rego policy (`src/main/resources/opa/command_authz.rego`) that includes time-of-day (`context.hour`) and equipment state (`context.state`) in its input — a class of decision the request-only authorizer cannot express.
+- **Evaluation.** The Rego is compiled to WebAssembly (`opa build -t wasm`) and evaluated **in-process in the JVM via Chicory** (a pure-JVM WASM runtime) — no runtime OPA server, no network. The committed `.wasm` keeps `mvn test` hermetic, the same CI-parity shape as `SchemaGate`.
+- **Coexistence.** The hand-rolled `CommandAuthorizer` (request-only, context-blind) is kept unchanged — it remains the path for existing NCMD-bridge consumers. `OpaCommandAuthorizer` is the go-forward engine for richer, context-aware decisions.
+- **Integrity.** A CI `policy-wasm` job rebuilds the wasm from the `.rego` and fails on drift from the committed binary; `opa test` provides policy-native proof (7/7 green).
+- **Roadmap (out of scope here).** Capability tokens / mTLS / pre-authorization, and wiring OPA into the edge `NcmdOpcUaBridge` enforcement point.
+
+## Links
+
+> The command-authorization implementation moved to [Bifrost](https://github.com/yggdrasil-iiot/bifrost) on 2026-07-08. The standalone [`legacy/pre-bifrost/`](../../legacy/pre-bifrost/) module is a copy of the pre-extraction demo code with its package renamed to `yggdrasil.sparkplug.legacy`.
+
+- Code: bifrost [`core/acl/`](https://github.com/yggdrasil-iiot/bifrost/tree/main/core/src/main/java/yggdrasil/bifrost/core/acl) · legacy copy [`acl/`](../../legacy/pre-bifrost/src/main/java/yggdrasil/sparkplug/legacy/acl)
+- Shell: legacy copy [`GuardedEdgeNode.java`](../../legacy/pre-bifrost/src/main/java/yggdrasil/sparkplug/legacy/GuardedEdgeNode.java) (edge enforcement now lives in bifrost [`heimdall/`](https://github.com/yggdrasil-iiot/bifrost/tree/main/heimdall))
+- CI gate: bifrost [`gates/PolicyGate.java`](https://github.com/yggdrasil-iiot/bifrost/blob/main/gates/src/main/java/yggdrasil/bifrost/gates/PolicyGate.java) (renamed from `CommandPolicyGate`) · legacy copy [`CommandPolicyGate.java`](../../legacy/pre-bifrost/src/main/java/yggdrasil/sparkplug/legacy/acl/CommandPolicyGate.java)
+- Demo: legacy copy [`CommandAclDemo.java`](../../legacy/pre-bifrost/src/main/java/yggdrasil/sparkplug/legacy/CommandAclDemo.java) — how to run it: [README › Running](../../README.md#running)
+- Policy: [`legacy/pre-bifrost/registry/command-policy.json`](../../legacy/pre-bifrost/registry/command-policy.json)
+- Related: ADR-0007 (schema gate), ADR-0006 (edge-id uniqueness), [namespace-standard §7](../namespace-standard.en.md)

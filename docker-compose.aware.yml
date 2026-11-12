@@ -1,0 +1,8 @@
+# Overlay for the Sparkplug-aware late-joiner experiment (ADR-0002).
+# Preserves the bundled allow-all extension (subpath mount) while adding the aware extension.
+#   A (non-aware): docker compose up -d
+#   B (aware):     docker compose -f docker-compose.yml -f docker-compose.aware.yml up -d --force-recreate
+services:
+  hivemq-ce:
+    volumes:
+      - ./hivemq-extensions/hivemq-sparkplug-aware-extension:/opt/hivemq/extensions/hivemq-sparkplug-aware-extension

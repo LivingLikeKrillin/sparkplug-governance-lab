@@ -1,0 +1,12 @@
+[GATE] step 0: build jars if missing
+[GATE] step 1: accept — conformant master spec must PASS (exit 0)
+[GATE] ref=MixProductA equipment=Line1-Mixer@1.0.0 setpoints=2
+[GATE] PASS ?
+[GATE] accept OK: conformant master spec returned 0
+[GATE] step 2: reject — out-of-range master spec must FAIL (exit 1)
+[GATE] ref=MixProductA equipment=Line1-Mixer@1.0.0 setpoints=2
+[GATE] FAIL ? ? violations:
+  - [spec.range.above-max] member 'Rpm' value 9999.0 is above max 3000.0
+[GATE] reject OK: out-of-range master spec returned 1
+
+[GATE] PASS run-spec-gate.sh

@@ -1,0 +1,12 @@
+[GATE] step 0: build jars if missing
+[GATE] step 1: accept — compatible (additive) proposal must PASS (exit 0)
+[GATE] ref=Motor mode=FORWARD registered=1.0.0 proposed=1.1.0
+[GATE] PASS ?
+[GATE] accept OK: compatible proposal returned 0
+[GATE] step 2: reject — breaking (member-removal, FORWARD) proposal must FAIL (non-zero)
+[GATE] ref=Motor mode=FORWARD registered=1.0.0 proposed=1.1.0
+[GATE] FAIL ? ? violations:
+  - [member.removed] member 'Running' removed ? violates FORWARD (old consumers expect this field); new templateRef + major bump required
+[GATE] reject OK: breaking proposal returned 1 (non-zero)
+
+[GATE] PASS run-schema-gate.sh

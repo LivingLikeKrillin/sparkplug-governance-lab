@@ -1,0 +1,15 @@
+target/
+*.class
+# opa build -t wasm output (regenerate via scripts/build-policy.sh)
+build/
+.idea/
+*.iml
+.vscode/
+# third-party extension binaries are downloaded, not committed
+hivemq-extensions/*
+!hivemq-extensions/README.md
+__pycache__/
+# mermaid-cli / puppeteer chromium cache must never be committed
+.cache/
+.puppeteer/
+docs/diagrams/.mermaid-cli/

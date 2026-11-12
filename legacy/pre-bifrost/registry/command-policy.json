@@ -1,0 +1,15 @@
+{
+  "version": "1.0.0",
+  "rules": [
+    { "id": "rebirth-press",
+      "principal": "ops",
+      "target": { "group": "Acme:Busan:Press", "edge": "L1:GW3" },
+      "command": "Node Control/Rebirth" },
+    { "id": "rpm-setpoint",
+      "principal": "engineer",
+      "target": { "group": "Acme:Busan:Press", "edge": "L1:GW3" },
+      "command": "Setpoint/Rpm",
+      "constraint": { "type": "Double", "min": 0, "max": 3000 } }
+  ],
+  "default": "deny"
+}

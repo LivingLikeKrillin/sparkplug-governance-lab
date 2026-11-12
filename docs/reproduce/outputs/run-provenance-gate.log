@@ -1,0 +1,16 @@
+[GATE] step 0: build jars if missing
+[GATE] step 1: seed a clean git repo with a committed recipe canonical
+warning: in the working copy of 'model/recipe-setpoints.yaml', LF will be replaced by CRLF the next time Git touches it
+[GATE] step 2: publish (mint) — must succeed (exit 0)
+[PUBLISH] recipe line1/1.0.0 defRef=634886e0b70b79d822d4102de96c85561bd1487f sha256=af2e0d985be2a12ea694b99a293a1e58cbd2a8342614bf0338528dfbb02d56d1
+[GATE] publish OK
+[GATE] step 3: independent sha256 cross-check (raw bytes, no CLI reuse)
+[GATE] independent sha256 OK: af2e0d985be2a12ea694b99a293a1e58cbd2a8342614bf0338528dfbb02d56d1 == manifest contentSha256
+[GATE] step 4: accept — verify against the untouched canonical must PASS (exit 0)
+[PROV-GATE] verify ref=line1 version=1.0.0 sha256=af2e0d985be2a12ea694b99a293a1e58cbd2a8342614bf0338528dfbb02d56d1 => OK
+[GATE] verify accept OK
+[GATE] step 5: reject — tamper the materialized canonical, verify must FAIL (non-zero)
+[PROV-GATE] verify ref=line1 version=1.0.0 sha256=303bd816255f8bbc9712a4bc317320249cc541bc40103b06eb04923abb0ff5a9 manifest=af2e0d985be2a12ea694b99a293a1e58cbd2a8342614bf0338528dfbb02d56d1 => MISMATCH (tampered or unresolvable)
+[GATE] verify reject OK: tamper detected (exit 1)
+
+[GATE] PASS run-provenance-gate.sh
